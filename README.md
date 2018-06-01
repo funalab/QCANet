@@ -132,7 +132,7 @@ The left hand side of the image(movie) is the early-stage mouse embryo, whose ce
 # Acknowledgement
 
 The microscopic images included in this repository is provided by Yamagata Lab., Kindai University.
-The development of this algorithm was funded a by JSPS KAKENHI Grant (Number 16H04731).
+The development of this algorithm was funded by a JSPS KAKENHI Grant (Number 16H04731).
 
 # References
 
