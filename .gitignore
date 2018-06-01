@@ -1,0 +1,11 @@
+# MacOSX
+.DS_Store
+
+#Output
+result_*
+src/result_*
+
+#Python
+src/*.pyc
+src/lib/*.pyc
+src/lib/__pycache__
