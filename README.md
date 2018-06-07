@@ -91,22 +91,22 @@ The left hand side of the image(movie) is the early-stage mouse embryo, whose ce
     The list of options will be displayed by adding `-h` option to the script.
 
     ```
-    --indir [INDIR], -i [INDIR]`                  : Specify input files directory for learning data.
-    --outdir [OUTDIR], -o [OUTDIR]`               : Specify output files directory where segmentation images and model file will be stored.
-    --gpu GPU, -g GPU`                            : Specify GPU ID (negative value indicates CPU).
-    --patchsize PATCHSIZE, -p PATCHSIZE`          : Specify one side voxel size of ROI.
-    --paddingsize PADDINGSIZE`                    : Specify image size after padding.
-    --epoch EPOCH, -e EPOCH`                      : Specify the number of sweeps over the dataset to train.
-    --resolution_x RESOLUTION_X, -x RESOLUTION_X` : Specify microscope resolution of x-axis (default=1.0).
-    --resolution_y RESOLUTION_Y, -y RESOLUTION_Y` : Specify microscope resolution of y-axis (default=1.0).
-    --resolution_z RESOLUTION_Z, -z RESOLUTION_Z` : Specify microscope resolution of z-axis (default=2.18).
-    --batchsize BATCHSIZE, -b BATCHSIZE`          : Specify minibatch size.
-    --crossvalidation FOLD, -c FOLD`              : Specify k-fold cross-validation.
-    --normalization, -n`                          : Will use mean normalization method.
-    --augmentation, -a`                           : Will do data augmentation (flip).
-    --classweight, -w`                            : Will use Softmax_Corss_Entropy.
-    --scaling, -s`                                : WIll do image-wise scaling.
-    --opt_method [{Adam,SGD}]`                    : Specify optimizer (Adam or SGD).
+    --indir [INDIR], -i [INDIR]                  : Specify input files directory for learning data.
+    --outdir [OUTDIR], -o [OUTDIR]               : Specify output files directory where segmentation images and model file will be stored.
+    --gpu GPU, -g GPU                            : Specify GPU ID (negative value indicates CPU).
+    --patchsize PATCHSIZE, -p PATCHSIZE          : Specify one side voxel size of ROI.
+    --paddingsize PADDINGSIZE                    : Specify image size after padding.
+    --epoch EPOCH, -e EPOCH                      : Specify the number of sweeps over the dataset to train.
+    --resolution_x RESOLUTION_X, -x RESOLUTION_X : Specify microscope resolution of x-axis (default=1.0).
+    --resolution_y RESOLUTION_Y, -y RESOLUTION_Y : Specify microscope resolution of y-axis (default=1.0).
+    --resolution_z RESOLUTION_Z, -z RESOLUTION_Z : Specify microscope resolution of z-axis (default=2.18).
+    --batchsize BATCHSIZE, -b BATCHSIZE          : Specify minibatch size.
+    --crossvalidation FOLD, -c FOLD              : Specify k-fold cross-validation.
+    --normalization, -n                          : Will use mean normalization method.
+    --augmentation, -a                           : Will do data augmentation (flip).
+    --classweight, -w                            : Will use Softmax_Corss_Entropy.
+    --scaling, -s                                : WIll do image-wise scaling.
+    --opt_method [{Adam,SGD}]                    : Specify optimizer (Adam or SGD).
     ```
 
 3. Run QCA Net with the above-prepared dataset.
