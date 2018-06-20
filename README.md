@@ -65,10 +65,14 @@ The left hand side of the image(movie) is the early-stage mouse embryo, whose ce
 
     ```
     your_dataset/
-           +-- 2_cell_stage/
+           +-- 2_cell_stage_1/
            |           +-- image.tif           (3D fluorescence microscopic image)
            |           +-- segmentation_gt.tif (the ground truth of segmentation)
            |           +-- detection_gt.tif    (the ground truth of detection)
+           +-- 2_cell_stage_2/
+           |           +-- image.tif
+           |           +-- segmentation_gt.tif
+           |           +-- detection_gt.tif
            +-- 4_cell_stage/
            |           +-- image.tif
            |           +-- segmentation_gt.tif
