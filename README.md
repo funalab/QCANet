@@ -128,7 +128,7 @@ The left hand side of the image(movie) is the early-stage mouse embryo, whose ce
     % python train_ndn.py -i datasets/ [optional arguments]   # for NDN
     ```
 
-3. Run QCA Net for instance segmentation
+3. Run QCA Net for instance segmentation.
 
     Prepare a directory which stores images that you want to segment(ex. `embryo_images/`) and
     perform segmentation and detection with `qca_net.py` to the images in this directory.
