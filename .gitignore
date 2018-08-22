@@ -1,6 +1,9 @@
 # MacOSX
 .DS_Store
 
+#Model
+models/p128/learned_ndn.model
+
 #Output
 result_*
 src/result_*
