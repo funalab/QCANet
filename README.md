@@ -32,14 +32,17 @@ The left hand side of the image(movie) is the early-stage mouse embryo, whose ce
 
 ## QuickStart
 
-1. Download the QCANet repository by `git lfs clone`. Please note to use `git lfs
-   clone` instead of `git clone` because the learned model is huge to be
-   handled with github, so we decided to store the learned model on Git LFS.
-   Please follow the instruction on [Git Large File Storage](https://git-lfs.github.com) to install Git LFS on your system.
+1. Download the QCANet repository by `git clone`.
+1. Download learned model.
 2. Change directory to `QCANet/src`.
 3. Run QCA Net.
+
     ```sh
-    % git lfs clone https://github.com/funalab/QCANet.git
+    % git clone https://github.com/funalab/QCANet.git
+    # If you have wget on your system (ex. Linux)
+    % wget -P QCANet/models/p128 https://fun.bio.keio.ac.jp/software/QCANet/learned_ndn.model
+    # If you have curl on your system (ex. macOS)
+    % curl -o QCANet/models/p128/learned_ndn.model https://fun.bio.keio.ac.jp/software/QCANet/learned_ndn.model
     % cd QCANet/src
     % python qca_net.py --scaling_seg --scaling_det [--gpu gpu]
     ```
