@@ -33,19 +33,26 @@ The left hand side of the image(movie) is the early-stage mouse embryo, whose ce
 ## QuickStart
 
 1. Download the QCANet repository by `git clone`.
-1. Download learned model.
-2. Change directory to `QCANet/src`.
-3. Run QCA Net.
+2. Download learned model.
+3. Change directory to `QCANet/src`.
+4. Run QCA Net.
+    - On Linux:
 
-    ```sh
-    % git clone https://github.com/funalab/QCANet.git
-    # If you have wget on your system (ex. Linux)
-    % wget -P QCANet/models/p128 https://fun.bio.keio.ac.jp/software/QCANet/learned_ndn.model
-    # If you have curl on your system (ex. macOS)
-    % curl -o QCANet/models/p128/learned_ndn.model https://fun.bio.keio.ac.jp/software/QCANet/learned_ndn.model
-    % cd QCANet/src
-    % python qca_net.py --scaling_seg --scaling_det [--gpu gpu]
-    ```
+        ```sh
+        % git clone https://github.com/funalab/QCANet.git
+        % wget -P QCANet/models/p128 https://fun.bio.keio.ac.jp/software/QCANet/learned_ndn.model
+        % cd QCANet/src
+        % python qca_net.py --scaling_seg --scaling_det [--gpu gpu]
+        ```
+
+    - On macOS:
+
+        ```sh
+        % git clone https://github.com/funalab/QCANet.git
+        % curl -o QCANet/models/p128/learned_ndn.model https://fun.bio.keio.ac.jp/software/QCANet/learned_ndn.model
+        % cd QCANet/src
+        % python qca_net.py --scaling_seg --scaling_det [--gpu gpu]
+        ```
 
     The processing time of above example will be about 20 sec on GPU (NVIDIA Tesla K40).
     In this script, the input images are hard coded to be `images/example_input/16cell-image.tif`, and
@@ -54,7 +61,7 @@ The left hand side of the image(movie) is the early-stage mouse embryo, whose ce
 
     ![quick_start](raw/quick_start.png)
 
-4. Extract quantitative criteria from the segmentation images.
+5. Extract quantitative criteria from the segmentation images.
 
     ```sh
     % python extract.py
