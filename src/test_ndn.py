@@ -56,17 +56,20 @@ class TestNDN():
         if self.patchsize > np.max(ip_size):
             pad_size = self.patchsize
         else:
-            if (np.max(ip_size) - self.patchsize) % self.stride == 0:
-                stride_num = (np.max(ip_size) - self.patchsize) / self.stride
-            else:
-                stride_num = (np.max(ip_size) - self.patchsize) / self.stride + 1
-            pad_size = self.stride * stride_num + self.patchsize            
-        image = util.mirrorExtensionImage(image=image, length=int(self.patchsize))[0:pad_size, 0:pad_size, 0:pad_size]
+            ''' calculation for pad size'''
+            pad_size = []
+            for axis in range(len(ip_size)):
+                if (ip_size[axis] - self.patchsize) % self.stride == 0:
+                    stride_num = (ip_size[axis] - self.patchsize) / self.stride
+                else:
+                    stride_num = (ip_size[axis] - self.patchsize) / self.stride + 1
+                pad_size.append(self.stride * stride_num + self.patchsize)
+        image = util.mirrorExtensionImage(image=image, length=int(self.patchsize))[0:pad_size[0], 0:pad_size[1], 0:pad_size[2]]
         pre_img = np.zeros((image.shape))
 
-        for z in range(0, pad_size-self.stride, self.stride):
-            for y in range(0, pad_size-self.stride, self.stride):
-                for x in range(0, pad_size-self.stride, self.stride):
+        for z in range(0, pad_size[0]-self.stride, self.stride):
+            for y in range(0, pad_size[1]-self.stride, self.stride):
+                for x in range(0, pad_size[2]-self.stride, self.stride):
                     x_patch = image[z:z+self.patchsize, y:y+self.patchsize, x:x+self.patchsize]
                     x_patch = x_patch.reshape(1, 1, self.patchsize, self.patchsize, self.patchsize).astype(np.float32)
                     if self.gpu >= 0:
