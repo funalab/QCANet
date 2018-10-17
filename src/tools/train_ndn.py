@@ -14,9 +14,10 @@ from skimage import io
 from skimage import transform as tr
 from argparse import ArgumentParser
 
-from lib.model import Model_L2, Model_L3, Model_L4
-from lib.utils import Utils
-from lib.trainer import NDNTrainer
+sys.path.append(os.getcwd())
+from src.lib.model import Model_L2, Model_L3, Model_L4
+from src.lib.utils import Utils
+from src.lib.trainer import NDNTrainer
 
 
 def main():
@@ -66,7 +67,7 @@ def main():
         ip_size = (int(images['ori' + dl].shape[0] * args.resolution_z), int(images['ori' + dl].shape[1] * args.resolution_y), int(images['ori' + dl].shape[2] * args.resolution_x))
         images['ori' + dl] = tr.resize(images['ori' + dl], ip_size, order = 1, preserve_range = True)
         images['ans' + dl] = tr.resize(images['ans' + dl], ip_size, order = 1, preserve_range = True)
-        
+
     # Pre-Processing 2 (Dataset Augmentation)
     orilist = copy.deepcopy(ylist)
     if args.augmentation:
@@ -133,7 +134,7 @@ def main():
     # Number of Original Data Size
     N_train = len(crossIdx[0] * (args.crossvalidation-1))
     N_test = len(crossIdx[0])
-        
+
     # Output Data Properties
     print('[Training Data Properties]')
     print('number of Train Data : ' + str(N_train))
@@ -222,7 +223,7 @@ def main():
             obj_w = float(bg + obj) / obj
             print('bg_w: ' + str(bg_w))
             print('obj_w: ' + str(obj_w))
-            class_weight = np.array([bg_w, obj_w]).astype(np.float32)                
+            class_weight = np.array([bg_w, obj_w]).astype(np.float32)
         else:
             class_weight = np.array([1, 1]).astype(np.float32)
 
@@ -271,6 +272,6 @@ def main():
         f.write('======================================\n')
         f.write('Elapsed time is (sec) {} \n'.format(process_time))
     print('NDN Training Completed Process!')
-        
+
 if __name__ == '__main__':
     main()
