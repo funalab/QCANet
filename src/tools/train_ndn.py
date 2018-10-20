@@ -16,7 +16,7 @@ from argparse import ArgumentParser
 
 sys.path.append(os.getcwd())
 from src.lib.model import Model_L2, Model_L3, Model_L4
-from src.lib.utils import Utils
+from src.lib.utils import createOpbase
 from src.lib.trainer import NDNTrainer
 
 
@@ -43,8 +43,7 @@ def main():
     args = ap.parse_args()
     argvs = sys.argv
     patchsize = args.patchsize
-    util = Utils(patchsize, args.batchsize)
-    opbase = util.createOpbase(args.outdir)
+    opbase = createOpbase(args.outdir)
     psep = '/'
 
     # Load Images

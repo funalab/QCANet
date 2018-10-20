@@ -28,7 +28,7 @@ class NSNTrainer():
         self.class_num = len(model.class_weight)
         self.opt_method = opt_method
 
-    def NSNTraining(self, trainIdx, testIdx, xlist, ylist, kc):
+    def training(self, trainIdx, testIdx, xlist, ylist, kc):
         if self.opt_method == 'Adam':
             opt_nsn = optimizers.Adam(alpha=0.05767827010227712, beta1=0.9687170166672859,
                                       beta2=0.9918705323205452, eps=0.03260658847351856)
@@ -80,14 +80,14 @@ class NSNTrainer():
                 f.write('test mean loss={}\n'.format(test_sum_loss / (N_test * self.batchsize)))
                 f.write('test accuracy={}, recall={}\n'.format(teseval['Accuracy'], teseval['Recall']))
                 f.write('test precision={}, specificity={}\n'.format(teseval['Precision'], teseval['Specificity']))
-                f.write('test F-measure={}, IoU={}\n'.format(teseval['F-measure'], teseval['IoU']))                
+                f.write('test F-measure={}, IoU={}\n'.format(teseval['F-measure'], teseval['IoU']))
             with open(self.opbase + '/TrainResult.csv', 'a') as f:
                 c = csv.writer(f)
                 c.writerow([epoch, traeval['Accuracy'], traeval['Recall'], traeval['Precision'], traeval['Specificity'], traeval['F-measure'], traeval['IoU']])
             with open(self.opbase + '/TestResult.csv', 'a') as f:
                 c = csv.writer(f)
                 c.writerow([epoch, teseval['Accuracy'], teseval['Recall'], teseval['Precision'], teseval['Specificity'], teseval['F-measure'], teseval['IoU']])
-            
+
             if epoch == 1:
                 pastLoss = train_sum_loss
 
@@ -97,10 +97,10 @@ class NSNTrainer():
                 opt_nsn.setup(self.model)
                 with open(self.opbase + '/result.txt', 'a') as f:
                     f.write('lr: {}\n'.format(opt_nsn.lr))
-                
+
             pastLoss = train_sum_loss
 
-                
+
             if bestAccuracy <= teseval['Accuracy']:
                 bestAccuracy = teseval['Accuracy']
             if bestRecall <= teseval['Recall']:
@@ -140,10 +140,10 @@ class NSNTrainer():
             f.write('BestSpecificity={}, BestFmesure={}\n'.format(bestSpecificity, bestFmeasure))
             f.write('BestIoU={}, BestEpoch={}\n'.format(bestIoU, bestEpoch))
             f.write('################################################\n')
-        
+
         return train_eval, test_eval, bestScore
-    
-                
+
+
     def _trainer(self, opt_nsn, Idx, xlist, ylist, train, epoch):
         N = len(Idx)
         sum_loss = 0
@@ -158,7 +158,7 @@ class NSNTrainer():
             y_patch = self.images[ylist[Idx[n][0]]][ Idx[n][3]:Idx[n][3]+self.patchsize, Idx[n][2]:Idx[n][2]+self.patchsize, Idx[n][1]:Idx[n][1]+self.patchsize ]
             x_patch = x_patch.reshape(1, 1, self.patchsize, self.patchsize, self.patchsize).astype(np.float32)
             y_patch = y_patch.reshape(1, self.patchsize, self.patchsize, self.patchsize).astype(np.int32)
-            
+
             if self.gpu >= 0:
                 x_patch = cuda.to_gpu(x_patch)
                 y_patch = cuda.to_gpu(y_patch)
@@ -186,7 +186,7 @@ class NSNTrainer():
 
         return TP, TN, FP, FN, sum_loss
 
-    
+
     def _evaluator(self, TP, TN, FP, FN):
         evals = {}
         try:
@@ -214,9 +214,9 @@ class NSNTrainer():
         except:
             evals['IoU'] = 0.0
         return evals
-    
 
-    
+
+
 class NDNTrainer():
 
     def __init__(self, images, model, epoch, patchsize, batchsize, gpu, opbase,
@@ -235,7 +235,7 @@ class NDNTrainer():
         self.delv = delv
         self.r_thr = r_thr
 
-    def NDNTraining(self, trainIdx, testIdx, xlist, ylist, kc):
+    def training(self, trainIdx, testIdx, xlist, ylist, kc):
         if self.opt_method == 'Adam':
             opt_ndn = optimizers.Adam(alpha=0.07984883572883512, beta1=0.9113157387413141,
                                       beta2=0.9931108449092836, eps=0.07309957525741932)
@@ -299,9 +299,9 @@ class NDNTrainer():
                 opt_ndn.setup(self.model)
                 with open(self.opbase + '/result.txt', 'a') as f:
                     f.write('lr: {}\n'.format(opt_ndn.lr))
-                
+
             pastLoss = train_sum_loss
-                        
+
             if bestRecall <= teseval['Recall']:
                 bestRecall = teseval['Recall']
                 # Save Model
@@ -334,10 +334,10 @@ class NDNTrainer():
             f.write('BestRecall={}, BestPrecision={}\n'.format(bestRecall, bestPrecision))
             f.write('BestFmesure={}, BestIoU={}\n'.format(bestFmeasure, bestIoU))
             f.write('################################################\n')
-        
+
         return train_eval, test_eval, bestScore
-    
-                
+
+
     def _trainer(self, opt_ndn, Idx, xlist, ylist, train, epoch):
         N = len(Idx)
         sum_loss = 0
@@ -353,7 +353,7 @@ class NDNTrainer():
             y_patch = self.images[ylist[Idx[n][0]]][ Idx[n][3]:Idx[n][3]+self.patchsize, Idx[n][2]:Idx[n][2]+self.patchsize, Idx[n][1]:Idx[n][1]+self.patchsize ]
             x_patch = x_patch.reshape(1, 1, self.patchsize, self.patchsize, self.patchsize).astype(np.float32)
             y_patch = y_patch.reshape(1, self.patchsize, self.patchsize, self.patchsize).astype(np.int32)
-            
+
             if self.gpu >= 0:
                 x_patch = cuda.to_gpu(x_patch)
                 y_patch = cuda.to_gpu(y_patch)
@@ -418,10 +418,10 @@ class NDNTrainer():
                         pare.append(chaild)
                 used = np.zeros(len(center_pr))
                 TP += self._search_list(pare, used, 0)
-                
+
         return TP, numPR, numGT, sum_loss
 
-    
+
     def _evaluator(self, TP, numPR, numGT):
         evals = {}
         FP = numPR - TP
@@ -444,7 +444,7 @@ class NDNTrainer():
             evals['IoU'] = 0.0
         return evals
 
-    
+
     def _search_list(self, node, used, idx):
         if len(node) == idx:
             return 0
