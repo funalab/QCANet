@@ -9,3 +9,5 @@ src/result_*
 src/*.pyc
 src/lib/*.pyc
 src/lib/__pycache__
+datasets/
+src/__pycache__/
