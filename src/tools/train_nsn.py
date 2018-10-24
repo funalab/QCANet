@@ -110,7 +110,7 @@ def main():
         trainer = NSNTrainer(
             model=model,
             epoch=args.epoch,
-            patchsize=args.patch_size,
+            patchsize=eval(args.patch_size),
             batchsize=args.batchsize,
             gpu=args.gpu,
             opbase=opbase,
@@ -121,7 +121,7 @@ def main():
         trainer = NDNTrainer(
             model=model,
             epoch=args.epoch,
-            patchsize=args.patch_size,
+            patchsize=eval(args.patch_size),
             batchsize=args.batchsize,
             gpu=args.gpu,
             opbase=opbase,

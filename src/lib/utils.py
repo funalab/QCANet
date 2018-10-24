@@ -45,13 +45,14 @@ def get_dataset(args):
 def get_model(args):
     if args.model == 'NSN':
         model = Model_L2(
-            class_weight=eval(args.class_weight),
+            ndim=args.ndim,
             n_class=args.ch_out,
             init_channel=args.ch_base,
             kernel_size=3,
             pool_size=2,
             ap_factor=2,
-            gpu=args.gpu
+            gpu=args.gpu,
+            class_weight=eval(args.class_weight)
         )
     elif args.model == 'NDN':
         model = Model_L4(
@@ -316,7 +317,7 @@ def loadModel(model_path, model, opbase):
 
 
 # Oneside Mirroring Padding in Image-wise Processing
-def mirrorExtensionImage(image, length=10):
+def mirror_extension_image(image, length=10):
     lz, ly, lx = image.shape
     exbox = np.pad(image, pad_width=length, mode='reflect')
     return copy.deepcopy(exbox[length:lz+length*2, length:ly+length*2, length:lx+length*2])

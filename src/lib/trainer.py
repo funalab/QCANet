@@ -10,6 +10,8 @@ from skimage import morphology
 import chainer
 from chainer import Variable, optimizers, cuda, serializers
 
+from src.lib.utils import mirror_extension_image
+
 sys.setrecursionlimit(200000)
 
 class NSNTrainer():
@@ -64,11 +66,9 @@ class NSNTrainer():
 
         for epoch in range(1, self.epoch + 1):
             print('[epoch {}]'.format(epoch))
-            TP, TN, FP, FN, train_sum_loss = self._trainer(train_iter, opt_nsn, train=True, epoch=epoch)
-            traeval = self._evaluator(TP, TN, FP, FN)
+            traeval, train_sum_loss = self._trainer(train_iter, opt_nsn, epoch=epoch)
             train_eval['loss'].append(train_sum_loss / (N_train * self.batchsize))
-            TP, TN, FP, FN, test_sum_loss = self._trainer(val_iter, opt_nsn, train=False, epoch=epoch)
-            teseval = self._evaluator(TP, TN, FP, FN)
+            teseval, test_sum_loss = self._validater(val_iter, epoch=epoch)
             test_eval['loss'].append(test_sum_loss / (N_test * self.batchsize))
 
             for cri in self.criteria:
@@ -156,12 +156,12 @@ class NSNTrainer():
         return train_eval, test_eval, bestScore
 
 
-    def _trainer(self, dataset_iter, opt_nsn, train, epoch):
+    def _trainer(self, dataset_iter, opt_nsn, epoch):
+        TP, TN, FP, FN = 0, 0, 0, 0
         dataset_iter.reset()
         N = dataset_iter.dataset.__len__()
         sum_loss = 0
         #perm = np.random.permutation(N)
-        TP, TN, FP, FN = 0, 0, 0, 0
         for num in range(N):
             #n = perm[num]
             if self.mean_image is None:
@@ -174,10 +174,9 @@ class NSNTrainer():
                 y_patch = cuda.to_gpu(y_patch)
 
             s_loss, s_output = self.model(x=x_patch, t=y_patch, seg=False)
-            if train:
-                opt_nsn.target.cleargrads()
-                s_loss.backward()
-                opt_nsn.update()
+            opt_nsn.target.cleargrads()
+            s_loss.backward()
+            opt_nsn.update()
 
             #train_eval['loss'].append(s_loss.data)
             sum_loss += float(cuda.to_cpu(s_loss.data) * self.batchsize)
@@ -194,10 +193,63 @@ class NSNTrainer():
             FP += len(np.where(countListNeg.reshape(countListNeg.size)==1)[0])
             FN += len(np.where(countListNeg.reshape(countListNeg.size)==-1)[0])
 
-        return TP, TN, FP, FN, sum_loss
+        evals = self._evaluator(TP, TN, FP, FN)
+        return evals, sum_loss
+
+
+    def _validater(self, dataset_iter, epoch):
+        dataset_iter.reset()
+        N = dataset_iter.dataset.__len__()
+        sum_loss = 0
+        #perm = np.random.permutation(N)
+        for num in range(N):
+            if self.mean_image is None:
+                x_batch, y_batch = dataset_iter.next()[0]
+            else:
+                x_batch, y_batch = dataset_iter.next()[0][0] - self.mean_image, dataset_iter.next()[0][1]
+
+            im_size = np.shape(x_batch)
+            stride = self.patchsize / 2
+            if self.patchsize > np.max(im_size):
+                pad_size = self.patchsize
+            else:
+                if (np.max(im_size) - self.patchsize) % stride == 0:
+                    stride_num = (np.max(im_size) - self.patchsize) / stride
+                else:
+                    stride_num = (np.max(im_size) - self.patchsize) / stride + 1
+                pad_size = stride * stride_num + self.patchsize
+            image = mirror_extension_image(image=x_batch, length=int(self.patchsize))[0:pad_size, 0:pad_size, 0:pad_size]
+            pre_img = np.zeros((x_batch.shape))
+
+            for z in range(0, pad_size-stride, stride):
+                for y in range(0, pad_size-stride, stride):
+                    for x in range(0, pad_size-stride, stride):
+                        x_patch = x_batch[z:z+self.patchsize, y:y+self.patchsize, x:x+self.patchsize]
+                        x_patch = x_patch.reshape(1, 1, self.patchsize, self.patchsize, self.patchsize).astype(np.float32)
+                        if self.gpu >= 0:
+                            x_patch = cuda.to_gpu(x_patch)
+                        s_loss, s_output = self.model(x_patch, seg=False)
+                        sum_loss += float(cuda.to_cpu(s_loss.data) * self.batchsize)
+                        if self.gpu >= 0:
+                            s_output = cuda.to_cpu(s_output)
+                        pred = copy.deepcopy((0 < (s_output[0][1] - s_output[0][0])) * 255)
+                        # Add segmentation image
+                        pre_img[z:z+self.patchsize, y:y+self.patchsize, x:x+self.patchsize] += pred
+            seg_img = (pre_img > 0) * 255
+            seg_img = seg_img[0:im_size[0], 0:im_size[1], 0:im_size[2]]
+            countListPos = copy.deepcopy(seg_img + y_batch)
+            countListNeg = copy.deepcopy(seg_img - y_batch)
+            TP += len(np.where(countListPos.reshape(countListPos.size)==2)[0])
+            TN += len(np.where(countListPos.reshape(countListPos.size)==0)[0])
+            FP += len(np.where(countListNeg.reshape(countListNeg.size)==1)[0])
+            FN += len(np.where(countListNeg.reshape(countListNeg.size)==-1)[0])
+
+        evals = self._evaluator(TP, TN, FP, FN)
+        return evals, sum_loss
 
 
     def _evaluator(self, TP, TN, FP, FN):
+
         evals = {}
         try:
             evals['Accuracy'] = (TP + TN) / float(TP + TN + FP + FN)
