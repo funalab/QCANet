@@ -154,4 +154,4 @@ class PreprocessedDataset(chainer.dataset.DatasetMixin):
         image = self._get_image(i)
         label = self._get_label(i)
         x, t = crop_pair_3d(image, label, crop_size=self.crop_size)
-        return np.expand_dims(x.astype(np.float32), axis=0), np.expand_dims(t.astype(np.int32), axis=0)
+        return np.expand_dims(np.expand_dims(x.astype(np.float32), axis=0), axis=0), np.expand_dims(t.astype(np.int32), axis=0)

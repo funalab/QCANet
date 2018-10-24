@@ -32,7 +32,6 @@ class NSNTrainer():
         self.gpu = gpu
         self.opbase = opbase
         self.mean_image = mean_image
-        #self.class_num = len(model.class_weight)
         self.opt_method = opt_method
         self.criteria = ['Accuracy', 'Recall', 'Precision', 'Specificity', 'F-measure', 'IoU']
 
@@ -158,35 +157,17 @@ class NSNTrainer():
 
 
     def _trainer(self, dataset_iter, opt_nsn, train, epoch):
-        with open(self.opbase + '/result.txt', 'a') as f:
-            f.write('==================trainer 1======================\n')
         dataset_iter.reset()
         N = dataset_iter.dataset.__len__()
-        with open(self.opbase + '/result.txt', 'a') as f:
-            f.write('=================trainer 2=======================\n')
-            f.write('number of sample: {}\n'.format(N))
         sum_loss = 0
         #perm = np.random.permutation(N)
         TP, TN, FP, FN = 0, 0, 0, 0
         for num in range(N):
             #n = perm[num]
             if self.mean_image is None:
-                #x_patch = self.images[xlist[Idx[n][0]]][ Idx[n][3]:Idx[n][3]+self.patchsize, Idx[n][2]:Idx[n][2]+self.patchsize, Idx[n][1]:Idx[n][1]+self.patchsize ]
-                x_patch, y_patch = dataset_iter.next()
+                x_patch, y_patch = dataset_iter.next()[0]
             else:
-                #x_patch = self.images[xlist[Idx[n][0]]][ Idx[n][3]:Idx[n][3]+self.patchsize, Idx[n][2]:Idx[n][2]+self.patchsize, Idx[n][1]:Idx[n][1]+self.patchsize ] - self.mean_image[ Idx[n][3]:Idx[n][3]+self.patchsize, Idx[n][2]:Idx[n][2]+self.patchsize, Idx[n][1]:Idx[n][1]+self.patchsize ]
-                x_patch, y_patch = dataset_iter.next() - self.mean_image
-            with open(self.opbase + '/result.txt', 'a') as f:
-                f.write('=================trainer 3=======================\n')
-            #y_patch = self.images[ylist[Idx[n][0]]][ Idx[n][3]:Idx[n][3]+self.patchsize, Idx[n][2]:Idx[n][2]+self.patchsize, Idx[n][1]:Idx[n][1]+self.patchsize ]
-            #x_patch = x_patch.reshape(1, 1, self.patchsize, self.patchsize, self.patchsize).astype(np.float32)
-            #y_patch = y_patch.reshape(1, self.patchsize, self.patchsize, self.patchsize).astype(np.int32)
-            
-            with open(self.opbase + '/result.txt', 'w') as f:
-                f.write('x_patch shape: {}\n'.format(np.shape(x_patch)))
-                f.write('y_patch shape: {}\n'.format(np.shape(y_patch)))
-                f.write('x_patch: {}\n'.format(x_patch))
-                f.write('y_patch: {}\n'.format(y_patch))
+                x_patch, y_patch = dataset_iter.next()[0][0] - self.mean_image, dataset_iter.next()[0][1]
 
             if self.gpu >= 0:
                 x_patch = cuda.to_gpu(x_patch)

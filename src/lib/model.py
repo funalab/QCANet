@@ -10,7 +10,10 @@ import chainer.links as L
 class Model_L2(Chain):
     def __init__(self, class_weight, n_class=2, init_channel=2, kernel_size=3, pool_size=2,
                  ap_factor=2, gpu=-1):
-        self.class_weight = class_weight
+        if gpu >= 0:
+            self.class_weight = cuda.to_gpu(np.array(class_weight).astype(np.float32))
+        else:
+            self.class_weight = np.array(class_weight).astype(np.float32)
         self.init_channel = init_channel
         self.kernel_size = kernel_size
         self.pool_size = pool_size
@@ -96,7 +99,10 @@ class Model_L2(Chain):
 class Model_L3(Chain):
     def __init__(self, class_weight, n_class=2, init_channel=2, kernel_size=3, pool_size=2,
                  ap_factor=2, gpu=-1):
-        self.class_weight = class_weight
+        if gpu >= 0:
+            self.class_weight = cuda.to_gpu(np.array(class_weight).astype(np.float32))
+        else:
+            self.class_weight = np.array(class_weight).astype(np.float32)
         self.init_channel = init_channel
         self.kernel_size = kernel_size
         self.pool_size = pool_size
@@ -203,7 +209,10 @@ class Model_L3(Chain):
 class Model_L4(Chain):
     def __init__(self, class_weight, n_class=2, init_channel=2, kernel_size=3, pool_size=2,
                  ap_factor=2, gpu=-1):
-        self.class_weight = class_weight
+        if gpu >= 0:
+            self.class_weight = cuda.to_gpu(np.array(class_weight).astype(np.float32))
+        else:
+            self.class_weight = np.array(class_weight).astype(np.float32)
         self.init_channel = init_channel
         self.kernel_size = kernel_size
         self.pool_size = pool_size

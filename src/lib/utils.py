@@ -25,7 +25,7 @@ def get_dataset(args):
         augmentation=args.augmentation,
         scaling=args.scaling,
         resolution=eval(args.resolution),
-        crop_size=eval(args.patchsize)
+        crop_size=eval(args.patch_size)
     )
     validation_dataset = PreprocessedDataset(
         root_path=args.root_path,
@@ -37,7 +37,7 @@ def get_dataset(args):
         augmentation=False,
         scaling=args.scaling,
         resolution=eval(args.resolution),
-        crop_size=eval(args.patchsize)
+        crop_size=eval(args.patch_size)
     )
     return train_dataset, validation_dataset
 
@@ -45,7 +45,7 @@ def get_dataset(args):
 def get_model(args):
     if args.model == 'NSN':
         model = Model_L2(
-            class_weight=args.class_weight,
+            class_weight=eval(args.class_weight),
             n_class=args.ch_out,
             init_channel=args.ch_base,
             kernel_size=3,
@@ -55,7 +55,7 @@ def get_model(args):
         )
     elif args.model == 'NDN':
         model = Model_L4(
-            class_weight=args.class_weight,
+            class_weight=eval(args.class_weight),
             n_class=args.ch_out,
             init_channel=args.ch_base,
             kernel_size=3,
@@ -145,8 +145,8 @@ def create_runtime_parser(remaining_argv, **conf_dict):
                         help='If True, mean normalization')
     parser.add_argument('--augmentation', type=strtobool,
                         help='If True, data augmentation (rotation)')
-    parser.add_argument('--class_weight', type=strtobool,
-                        help='If True, use class weight with softmax corss entropy')
+    parser.add_argument('--class_weight',
+                        help='Specify class weight with softmax corss entropy')
     parser.add_argument('--scaling', type=strtobool,
                         help='If True, image-wise scaling image')
     args, remaining_argv = parser.parse_known_args(remaining_argv)
