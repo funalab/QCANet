@@ -8,12 +8,13 @@ import time
 import argparse
 import skimage.io as io
 from os import path as pt
+from distutils.util import strtobool
 from chainer import serializers
 
 from src.lib.dataset import PreprocessedDataset
 from src.lib.model import Model_L2, Model_L3, Model_L4
 
-def get_dataset(path):
+def get_dataset(args):
     train_dataset = PreprocessedDataset(
         root_path=args.root_path,
         split_list=args.split_list_train,
@@ -25,7 +26,7 @@ def get_dataset(path):
         scaling=args.scaling
     )
     validation_dataset = PreprocessedDataset(
-        path=args.root_path,
+        root_path=args.root_path,
         split_list=args.split_list_validation,
         train=False,
         model=args.model,
@@ -43,7 +44,7 @@ def get_model(args):
             class_weight=args.class_weight,
             n_class=args.ch_out,
             init_channel=args.ch_base,
-            kernel_size=3
+            kernel_size=3,
             pool_size=2,
             ap_factor=2,
             gpu=args.gpu
@@ -53,7 +54,7 @@ def get_model(args):
             class_weight=args.class_weight,
             n_class=args.ch_out,
             init_channel=args.ch_base,
-            kernel_size=3
+            kernel_size=3,
             pool_size=2,
             ap_factor=2,
             gpu=args.gpu
@@ -172,7 +173,7 @@ def print_args(dataset_args, model_args, runtime_args):
     print('============================\n')
 
 
-def loadImages(self, path):
+def loadImages(path):
     imagePathes = map(lambda a:os.path.join(path,a),os.listdir(path))
     try:
         imagePathes.pop(imagePathes.index(path + '/.DS_Store'))
@@ -183,7 +184,7 @@ def loadImages(self, path):
     return images
 
 
-def oneSideExtensionImage(self, images, patchsize):
+def oneSideExtensionImage(images, patchsize):
     lz, ly, lx = images.shape
     if lx % patchsize != 0:
         sx = lx + patchsize - 1
@@ -203,13 +204,13 @@ def oneSideExtensionImage(self, images, patchsize):
     return copy.deepcopy(exbox)
 
 
-def patch_crop(self, x_data, y_data, idx, n, patchsize):
+def patch_crop(x_data, y_data, idx, n, patchsize):
     x_patch = copy.deepcopy( np.array( x_data[ idx[n][2]:idx[n][2]+patchsize, idx[n][1]:idx[n][1]+patchsize, idx[n][0]:idx[n][0]+patchsize ] ).reshape(1, patchsize, patchsize, patchsize).astype(np.float32) )   # np.shape(idx_O[n][0]) [0] : x座標, n : 何番目の座標か
     y_patch = copy.deepcopy( np.array(y_data[ idx[n][2] ][ idx[n][1] ][ idx[n][0] ]).reshape(1).astype(np.int32) )
     return x_patch, y_patch
 
 
-def crossSplit(self, objData, bgData, objLabel, bgLabel, k_cross, n):
+def crossSplit(objData, bgData, objLabel, bgLabel, k_cross, n):
     objx, bgx, objy, bgy = [], [], [], []
     N = len(objData)
     for i in range(k_cross):
@@ -237,7 +238,7 @@ def crossSplit(self, objData, bgData, objLabel, bgLabel, k_cross, n):
 
 
 # Rotation & Flip for Data Augmentation (fix z-axis)
-def dataAugmentation(self, image, rot=True, flip=True):
+def dataAugmentation(image, rot=True, flip=True):
     lz, ly, lx = image.shape
     if rot and flip:
         flip = np.zeros((lz, ly, lx))
@@ -281,7 +282,7 @@ def dataAugmentation(self, image, rot=True, flip=True):
 
 
 # Create Opbase for Output Directory
-def createOpbase(self, opbase):
+def createOpbase(opbase):
     if (opbase[len(opbase) - 1] == '/'):
         opbase = opbase[:len(opbase) - 1]
     if not (opbase[0] == '/'):
@@ -298,7 +299,7 @@ def createOpbase(self, opbase):
     return opbase
 
 
-def loadModel(self, model_path, model, opbase):
+def loadModel(model_path, model, opbase):
     try:
         serializers.load_hdf5(model_path, model)
         print('Loading Model: {}'.format(model_path))
@@ -311,13 +312,13 @@ def loadModel(self, model_path, model, opbase):
 
 
 # Oneside Mirroring Padding in Image-wise Processing
-def mirrorExtensionImage(self, image, length=10):
+def mirrorExtensionImage(image, length=10):
     lz, ly, lx = image.shape
     exbox = np.pad(image, pad_width=length, mode='reflect')
     return copy.deepcopy(exbox[length:lz+length*2, length:ly+length*2, length:lx+length*2])
 
 
-def splitImage(self, image, stride):
+def splitImage(image, stride):
     lz, ly, lx = np.shape(image)
     num_split = int(((lx - stride) / stride) * ((ly - stride) / stride) * ((lz - stride) / stride))
     s_image = np.zeros((num_split, self.patchsize, self.patchsize, self.patchsize))

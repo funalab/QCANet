@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import chainer
 from chainer import cuda
 
 import csv
@@ -14,7 +15,6 @@ import argparse
 import configparser
 from skimage import io
 from skimage import transform as tr
-
 
 sys.path.append(os.getcwd())
 from src.lib.trainer import NSNTrainer, NDNTrainer
@@ -59,15 +59,15 @@ def main():
     ap = argparse.ArgumentParser(
         description='Learning Nuclear Segmentation Network',
         parents=[conf_parser, dataset_parser, model_parser, runtime_parser])
-    ap.add_argument('--gpu', type=int, help='GPU option')
+    ap.add_argument('--gpu_id', type=int, help='GPU option')
     args = ap.parse_args()
 
     patchsize = args.patch_size
     opbase = createOpbase(args.save_dir)
     psep = '/'
     print_args(dataset_args, model_args, runtime_args)
-    with open(opbase + psep + 'result.txt', 'w') as f:
-        f.write(print_args(dataset_args, model_args, runtime_args) + '\n')
+    #with open(opbase + psep + 'result.txt', 'w') as f:
+    #    f.write(print_args(dataset_args, model_args, runtime_args))
 
 
     ''' Dataset '''
@@ -107,13 +107,12 @@ def main():
         c = csv.writer(f)
         c.writerow(['Epoch', 'Accuracy', 'Recall', 'Precision', 'Specificity', 'F-measure', 'IoU'])
 
+    mean_image = None
     if args.model == 'NSN':
         trainer = NSNTrainer(
-            train_iter=train_iterator,
-            val_iter=validation_iterator,
             model=model,
             epoch=args.epoch,
-            patchsize=args.path_size,
+            patchsize=args.patch_size,
             batchsize=args.batchsize,
             gpu=args.gpu,
             opbase=opbase,
@@ -122,18 +121,16 @@ def main():
         )
     elif args.model == 'NDN':
         trainer = NDNTrainer(
-            train_iter=train_iterator,
-            val_iter=validation_iterator,
             model=model,
             epoch=args.epoch,
-            patchsize=args.path_size,
+            patchsize=args.patch_size,
             batchsize=args.batchsize,
             gpu=args.gpu,
             opbase=opbase,
             mean_image=mean_image,
             opt_method=args.optimizer
         )
-    train_eval, test_eval, best_score = trainer.training(trainIdx, testIdx, xlist, ylist, k)
+    train_eval, test_eval, best_score = trainer.training((train_iterator, validation_iterator))
 
 
 

@@ -14,21 +14,31 @@ sys.setrecursionlimit(200000)
 
 class NSNTrainer():
 
-    def __init__(self, images, model, epoch, patchsize, batchsize, gpu, opbase,
-                 mean_image=None, opt_method='Adam'):
-        self.images = images
+    def __init__(
+            self,
+            model,
+            epoch,
+            patchsize,
+            batchsize,
+            gpu,
+            opbase,
+            mean_image=None,
+            opt_method='Adam'
+    ):
         self.model = model
         self.epoch = epoch
         self.patchsize = patchsize
         self.batchsize = batchsize
         self.gpu = gpu
         self.opbase = opbase
-        self.criteria = ['Accuracy', 'Recall', 'Precision', 'Specificity', 'F-measure', 'IoU']
         self.mean_image = mean_image
-        self.class_num = len(model.class_weight)
+        #self.class_num = len(model.class_weight)
         self.opt_method = opt_method
+        self.criteria = ['Accuracy', 'Recall', 'Precision', 'Specificity', 'F-measure', 'IoU']
 
-    def training(self, trainIdx, testIdx, xlist, ylist, kc):
+    def training(self, iterators):
+        train_iter, val_iter = iterators
+
         if self.opt_method == 'Adam':
             opt_nsn = optimizers.Adam(alpha=0.05767827010227712, beta1=0.9687170166672859,
                                       beta2=0.9918705323205452, eps=0.03260658847351856)
@@ -45,17 +55,20 @@ class NSNTrainer():
         for cri in self.criteria:
             train_eval[cri] = []
             test_eval[cri] = []
-        N_train = len(trainIdx)
-        N_test = len(testIdx)
+        N_train = train_iter.dataset.__len__()
+        N_test = val_iter.dataset.__len__()
+        with open(self.opbase + '/result.txt', 'w') as f:
+            f.write('N_train: {}\n'.format(N_train))
+            f.write('N_test: {}\n'.format(N_test))
         bestAccuracy, bestRecall, bestPrecision, bestSpecificity, bestFmeasure, bestIoU = 0, 0, 0, 0, 0, 0
         bestEpoch = 0
 
         for epoch in range(1, self.epoch + 1):
             print('[epoch {}]'.format(epoch))
-            TP, TN, FP, FN, train_sum_loss = self._trainer(opt_nsn, trainIdx, xlist, ylist, train=True, epoch=epoch)
+            TP, TN, FP, FN, train_sum_loss = self._trainer(train_iter, opt_nsn, train=True, epoch=epoch)
             traeval = self._evaluator(TP, TN, FP, FN)
             train_eval['loss'].append(train_sum_loss / (N_train * self.batchsize))
-            TP, TN, FP, FN, test_sum_loss = self._trainer(opt_nsn, testIdx, xlist, ylist, train=False, epoch=epoch)
+            TP, TN, FP, FN, test_sum_loss = self._trainer(val_iter, opt_nsn, train=False, epoch=epoch)
             teseval = self._evaluator(TP, TN, FP, FN)
             test_eval['loss'].append(test_sum_loss / (N_test * self.batchsize))
 
@@ -106,12 +119,12 @@ class NSNTrainer():
             if bestRecall <= teseval['Recall']:
                 bestRecall = teseval['Recall']
                 # Save Model
-                model_name = 'NSN_Recall_hdf5_p' + str(self.patchsize) + '_k' + str(kc+1) + '.model'
+                model_name = 'NSN_Recall_hdf5_p' + str(self.patchsize) + '.model'
                 serializers.save_hdf5(self.opbase + '/' + model_name, self.model)
             if bestPrecision <= teseval['Precision']:
                 bestPrecision = teseval['Precision']
                 # Save Model
-                model_name = 'NSN_Precision_hdf5_p' + str(self.patchsize) + '_k' + str(kc+1) + '.model'
+                model_name = 'NSN_Precision_hdf5_p' + str(self.patchsize) + '.model'
                 serializers.save_hdf5(self.opbase + '/' + model_name, self.model)
             if bestSpecificity <= teseval['Specificity']:
                 bestSpecificity = teseval['Specificity']
@@ -121,7 +134,7 @@ class NSNTrainer():
                 bestIoU = teseval['IoU']
                 bestEpoch = epoch
                 # Save Model
-                model_name = 'NSN_IoU_hdf5_p' + str(self.patchsize) + '_k' + str(kc+1) + '.model'
+                model_name = 'NSN_IoU_hdf5_p' + str(self.patchsize) + '.model'
                 serializers.save_hdf5(self.opbase + '/' + model_name, self.model)
 
         bestScore = [bestAccuracy, bestRecall, bestPrecision, bestSpecificity, bestFmeasure, bestIoU]
@@ -144,20 +157,36 @@ class NSNTrainer():
         return train_eval, test_eval, bestScore
 
 
-    def _trainer(self, opt_nsn, Idx, xlist, ylist, train, epoch):
-        N = len(Idx)
+    def _trainer(self, dataset_iter, opt_nsn, train, epoch):
+        with open(self.opbase + '/result.txt', 'a') as f:
+            f.write('==================trainer 1======================\n')
+        dataset_iter.reset()
+        N = dataset_iter.dataset.__len__()
+        with open(self.opbase + '/result.txt', 'a') as f:
+            f.write('=================trainer 2=======================\n')
+            f.write('number of sample: {}\n'.format(N))
         sum_loss = 0
-        perm = np.random.permutation(N)
+        #perm = np.random.permutation(N)
         TP, TN, FP, FN = 0, 0, 0, 0
         for num in range(N):
-            n = perm[num]
+            #n = perm[num]
             if self.mean_image is None:
-                x_patch = self.images[xlist[Idx[n][0]]][ Idx[n][3]:Idx[n][3]+self.patchsize, Idx[n][2]:Idx[n][2]+self.patchsize, Idx[n][1]:Idx[n][1]+self.patchsize ]
+                #x_patch = self.images[xlist[Idx[n][0]]][ Idx[n][3]:Idx[n][3]+self.patchsize, Idx[n][2]:Idx[n][2]+self.patchsize, Idx[n][1]:Idx[n][1]+self.patchsize ]
+                x_patch, y_patch = dataset_iter.next()
             else:
-                x_patch = self.images[xlist[Idx[n][0]]][ Idx[n][3]:Idx[n][3]+self.patchsize, Idx[n][2]:Idx[n][2]+self.patchsize, Idx[n][1]:Idx[n][1]+self.patchsize ] - self.mean_image[ Idx[n][3]:Idx[n][3]+self.patchsize, Idx[n][2]:Idx[n][2]+self.patchsize, Idx[n][1]:Idx[n][1]+self.patchsize ]
-            y_patch = self.images[ylist[Idx[n][0]]][ Idx[n][3]:Idx[n][3]+self.patchsize, Idx[n][2]:Idx[n][2]+self.patchsize, Idx[n][1]:Idx[n][1]+self.patchsize ]
-            x_patch = x_patch.reshape(1, 1, self.patchsize, self.patchsize, self.patchsize).astype(np.float32)
-            y_patch = y_patch.reshape(1, self.patchsize, self.patchsize, self.patchsize).astype(np.int32)
+                #x_patch = self.images[xlist[Idx[n][0]]][ Idx[n][3]:Idx[n][3]+self.patchsize, Idx[n][2]:Idx[n][2]+self.patchsize, Idx[n][1]:Idx[n][1]+self.patchsize ] - self.mean_image[ Idx[n][3]:Idx[n][3]+self.patchsize, Idx[n][2]:Idx[n][2]+self.patchsize, Idx[n][1]:Idx[n][1]+self.patchsize ]
+                x_patch, y_patch = dataset_iter.next() - self.mean_image
+            with open(self.opbase + '/result.txt', 'a') as f:
+                f.write('=================trainer 3=======================\n')
+            #y_patch = self.images[ylist[Idx[n][0]]][ Idx[n][3]:Idx[n][3]+self.patchsize, Idx[n][2]:Idx[n][2]+self.patchsize, Idx[n][1]:Idx[n][1]+self.patchsize ]
+            #x_patch = x_patch.reshape(1, 1, self.patchsize, self.patchsize, self.patchsize).astype(np.float32)
+            #y_patch = y_patch.reshape(1, self.patchsize, self.patchsize, self.patchsize).astype(np.int32)
+            
+            with open(self.opbase + '/result.txt', 'w') as f:
+                f.write('x_patch shape: {}\n'.format(np.shape(x_patch)))
+                f.write('y_patch shape: {}\n'.format(np.shape(y_patch)))
+                f.write('x_patch: {}\n'.format(x_patch))
+                f.write('y_patch: {}\n'.format(y_patch))
 
             if self.gpu >= 0:
                 x_patch = cuda.to_gpu(x_patch)
@@ -230,7 +259,7 @@ class NDNTrainer():
         self.opbase = opbase
         self.criteria = ['Recall', 'Precision', 'F-measure', 'IoU']
         self.mean_image = mean_image
-        self.class_num = len(model.class_weight)
+        #self.class_num = len(model.class_weight)
         self.opt_method = opt_method
         self.delv = delv
         self.r_thr = r_thr

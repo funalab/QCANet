@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 
+import os
 import numpy as np
 from skimage import io
 import chainer
 
-from utils import Utils
 
 def read_img(path, arr_type='npz'):
     """ read image array from path
@@ -26,13 +26,14 @@ def read_img(path, arr_type='npz'):
 
     return image.astype(np.int32)
 
+
 def crop_pair_3d(
         image1,
         image2,
         crop_size=(96, 96, 96),
         nonzero_image1_thr=0.1,
         nonzero_image2_thr=0.1,
-        nb_crop=1
+        nb_crop=1,
         augmentation=True
     ):
     """ 3d {image, label} patches are cropped from array.
@@ -105,23 +106,23 @@ class PreprocessedDataset(chainer.dataset.DatasetMixin):
         split_list,
         train=True,
         model='NSN',
-        arr_type='npz'
-        normalization=False
-        augmentation=True
-        scaling=True
+        arr_type='npz',
+        normalization=False,
+        augmentation=True,
+        scaling=True,
         ):
-        self.root_path = args.root_path
-        self.split_list = args.split_list
-        self.model = args.model
-        self.arr_type = args.arr_type
-        self.normalization = args.normalization
-        self.augmentation = args.augmentation
-        self.scaling = args.scaling
+        self.root_path = root_path
+        self.split_list = split_list
+        self.model = model
+        self.arr_type = arr_type
+        self.normalization = normalization
+        self.augmentation = augmentation
+        self.scaling = scaling
         with open(split_list, 'r') as f:
             self.img_path = f.read().split()
 
     def __len__(self):
-        return len(self.path_img)
+        return len(self.img_path)
 
     def _get_image(self, i):
         image = read_img(os.path.join(self.root_path, 'images_raw', self.img_path[i]), self.arr_type)

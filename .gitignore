@@ -11,3 +11,9 @@ src/lib/*.pyc
 src/lib/__pycache__
 datasets/
 src/__pycache__/
+
+
+#Reedbush
+reedbush
+*.e*
+*.o*
