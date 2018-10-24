@@ -23,7 +23,9 @@ def get_dataset(args):
         arr_type=args.input_format,
         normalization=args.normalization,
         augmentation=args.augmentation,
-        scaling=args.scaling
+        scaling=args.scaling,
+        resolution=eval(args.resolution),
+        crop_size=eval(args.patchsize)
     )
     validation_dataset = PreprocessedDataset(
         root_path=args.root_path,
@@ -33,7 +35,9 @@ def get_dataset(args):
         arr_type=args.input_format,
         normalization=args.normalization,
         augmentation=False,
-        scaling=args.scaling
+        scaling=args.scaling,
+        resolution=eval(args.resolution),
+        crop_size=eval(args.patchsize)
     )
     return train_dataset, validation_dataset
 

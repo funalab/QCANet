@@ -13,8 +13,6 @@ import os
 import numpy as np
 import argparse
 import configparser
-from skimage import io
-from skimage import transform as tr
 
 sys.path.append(os.getcwd())
 from src.lib.trainer import NSNTrainer, NDNTrainer

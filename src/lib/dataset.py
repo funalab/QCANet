@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 
 import os
+import random
 import numpy as np
 from skimage import io
 import chainer
-
+from skimage import io
+from skimage import transform as tr
 
 def read_img(path, arr_type='npz'):
     """ read image array from path
@@ -19,7 +21,6 @@ def read_img(path, arr_type='npz'):
     elif arr_type in ('png', 'jpg'):
         image = imread(path, mode='L')
     elif arr_type == 'tif':
-        import skimage.io as io
         image = io.imread(path)
     else:
         raise ValueError('invalid --input_type : {}'.format(arr_type))
@@ -31,8 +32,8 @@ def crop_pair_3d(
         image1,
         image2,
         crop_size=(96, 96, 96),
-        nonzero_image1_thr=0.1,
-        nonzero_image2_thr=0.1,
+        nonzero_image1_thr=0.001,
+        nonzero_image2_thr=0.001,
         nb_crop=1,
         augmentation=True
     ):
@@ -70,17 +71,16 @@ def crop_pair_3d(
         rear = front + crop_size[2]
 
         # crop image
-        cropped_image1 = image1[top:bottom, left:right, front:rear]
-        cropped_image2 = image2[top:bottom, left:right, front:rear]
+        cropped_image1 = image1[front:rear, left:right, top:bottom]
+        cropped_image2 = image2[front:rear, left:right, top:bottom]
         # get nonzero ratio
-        nonzero_image1_ratio = np.nonzero(cropped_image1)[0].size / cropped_image1.size
-        nonzero_image2_ratio = np.nonzero(cropped_image2)[0].size / cropped_image2.size
+        nonzero_image1_ratio = np.nonzero(cropped_image1)[0].size / float(cropped_image1.size)
+        nonzero_image2_ratio = np.nonzero(cropped_image2)[0].size / float(cropped_image2.size)
 
         # rotate {image_A, image_B}
         if augmentation:
             aug_flag = random.randint(0, 3)
-            image1_aug = np.zeros((lz, ly, lx))
-            for z in range(z_len):
+            for z in range(cropped_image1.shape[0]):
                 cropped_image1[z] = np.rot90(cropped_image1[z], k=aug_flag)
                 cropped_image2[z] = np.rot90(cropped_image2[z], k=aug_flag)
 
@@ -110,6 +110,8 @@ class PreprocessedDataset(chainer.dataset.DatasetMixin):
         normalization=False,
         augmentation=True,
         scaling=True,
+        resolution=eval('(1.0, 1.0, 2.18)'),
+        crop_size=eval('(96, 96, 96)')
         ):
         self.root_path = root_path
         self.split_list = split_list
@@ -118,6 +120,9 @@ class PreprocessedDataset(chainer.dataset.DatasetMixin):
         self.normalization = normalization
         self.augmentation = augmentation
         self.scaling = scaling
+        self.resolution = resolution
+        self.crop_size = crop_size
+
         with open(split_list, 'r') as f:
             self.img_path = f.read().split()
 
@@ -126,6 +131,8 @@ class PreprocessedDataset(chainer.dataset.DatasetMixin):
 
     def _get_image(self, i):
         image = read_img(os.path.join(self.root_path, 'images_raw', self.img_path[i]), self.arr_type)
+        ip_size = (int(image.shape[0] * self.resolution[2]), int(image.shape[1] * self.resolution[1]), int(image.shape[2] * self.resolution[0]))
+        image = tr.resize(image, ip_size, order=1, preserve_range=True)
         if self.scaling:
             return image.astype(np.float32) / image.max()
         else:
@@ -139,8 +146,12 @@ class PreprocessedDataset(chainer.dataset.DatasetMixin):
         else:
             print('Warning: select model')
             sys.exit()
-        return label / label.max()
+        ip_size = (int(label.shape[0] * self.resolution[2]), int(label.shape[1] * self.resolution[1]), int(label.shape[2] * self.resolution[0]))
+        label = (tr.resize(label, ip_size, order=1, preserve_range=True) > 0) * 1
+        return label.astype(np.int32)
 
     def get_example(self, i):
-        x, t = crop_pair_3d(self._get_image(i), self._get_label(i), crop_size=self)
-        return np.expand_dims(x.astype(np.float32), axis=0), np.expand_dims(y.astype(np.int32), axis=0)
+        image = self._get_image(i)
+        label = self._get_label(i)
+        x, t = crop_pair_3d(image, label, crop_size=self.crop_size)
+        return np.expand_dims(x.astype(np.float32), axis=0), np.expand_dims(t.astype(np.int32), axis=0)
