@@ -122,6 +122,7 @@ class PreprocessedDataset(chainer.dataset.DatasetMixin):
         self.scaling = scaling
         self.resolution = resolution
         self.crop_size = crop_size
+        self.train = train
 
         with open(split_list, 'r') as f:
             self.img_path = f.read().split()
@@ -153,7 +154,7 @@ class PreprocessedDataset(chainer.dataset.DatasetMixin):
     def get_example(self, i):
         image = self._get_image(i)
         label = self._get_label(i)
-        if train:
+        if self.train:
             x, t = crop_pair_3d(image, label, crop_size=self.crop_size)
             return np.expand_dims(np.expand_dims(x.astype(np.float32), axis=0), axis=0), np.expand_dims(t.astype(np.int32), axis=0)
         else:

@@ -318,10 +318,21 @@ def loadModel(model_path, model, opbase):
 
 # Oneside Mirroring Padding in Image-wise Processing
 def mirror_extension_image(image, length=10):
-    lz, ly, lx = image.shape
-    exbox = np.pad(image, pad_width=length, mode='reflect')
-    return copy.deepcopy(exbox[length:lz+length*2, length:ly+length*2, length:lx+length*2])
-
+    if image.ndim == 5:
+        _, _, lz, ly, lx = image.shape
+        exbox = np.pad(image, pad_width=length, mode='reflect')
+        return copy.deepcopy(exbox[:, :, length:lz+length*2, length:ly+length*2, length:lx+length*2])
+    elif image.ndim == 4:
+        _, lz, ly, lx = image.shape
+        exbox = np.pad(image, pad_width=length, mode='reflect')
+        return copy.deepcopy(exbox[:, length:lz+length*2, length:ly+length*2, length:lx+length*2])
+    elif image.ndim == 3:
+        lz, ly, lx = image.shape
+        exbox = np.pad(image, pad_width=length, mode='reflect')
+        return copy.deepcopy(exbox[length:lz+length*2, length:ly+length*2, length:lx+length*2])
+    else:
+        print('Not corresponding to input image ndim in def mirror_extension_image()')
+        sys.exit()
 
 def splitImage(image, stride):
     lz, ly, lx = np.shape(image)

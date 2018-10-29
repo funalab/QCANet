@@ -29,7 +29,7 @@ class NSNTrainer():
     ):
         self.model = model
         self.epoch = epoch
-        self.patchsize = patchsize
+        self.patchsize = patchsize[0]
         self.batchsize = batchsize
         self.gpu = gpu
         self.opbase = opbase
@@ -219,12 +219,12 @@ class NSNTrainer():
                     stride_num = (np.max(im_size) - self.patchsize) / stride + 1
                 pad_size = stride * stride_num + self.patchsize
             image = mirror_extension_image(image=x_batch, length=int(self.patchsize))[0:pad_size, 0:pad_size, 0:pad_size]
-            pre_img = np.zeros((x_batch.shape))
+            pre_img = np.zeros((x_batch.shape[2:]))
 
             for z in range(0, pad_size-stride, stride):
                 for y in range(0, pad_size-stride, stride):
                     for x in range(0, pad_size-stride, stride):
-                        x_patch = x_batch[z:z+self.patchsize, y:y+self.patchsize, x:x+self.patchsize]
+                        x_patch = x_batch[:, :, z:z+self.patchsize, y:y+self.patchsize, x:x+self.patchsize]
                         x_patch = x_patch.reshape(1, 1, self.patchsize, self.patchsize, self.patchsize).astype(np.float32)
                         if self.gpu >= 0:
                             x_patch = cuda.to_gpu(x_patch)

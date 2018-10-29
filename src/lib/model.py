@@ -17,7 +17,7 @@ class Model_L2(Chain):
             pool_size=2,
             ap_factor=2,
             gpu=-1,
-            class_weight
+            class_weight=np.array([1, 1]).astype(np.float32)
         ):
         self.gpu = gpu
         self.pool_size = pool_size
@@ -112,7 +112,7 @@ class Model_L3(Chain):
             pool_size=2,
             ap_factor=2,
             gpu=-1,
-            class_weight
+            class_weight=np.array([1, 1]).astype(np.float32)
         ):
         self.gpu = gpu
         self.pool_size = pool_size
@@ -228,7 +228,7 @@ class Model_L4(Chain):
             pool_size=2,
             ap_factor=2,
             gpu=-1,
-            class_weight
+            class_weight=np.array([1, 1]).astype(np.float32)
         ):
         self.gpu = gpu
         self.pool_size = pool_size
