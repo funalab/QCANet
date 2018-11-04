@@ -320,16 +320,22 @@ def loadModel(model_path, model, opbase):
 def mirror_extension_image(image, length=10):
     if image.ndim == 5:
         _, _, lz, ly, lx = image.shape
-        exbox = np.pad(image, pad_width=length, mode='reflect')
-        return copy.deepcopy(exbox[:, :, length:lz+length*2, length:ly+length*2, length:lx+length*2])
+        exbox = np.pad(image[0, 0], pad_width=length, mode='reflect')
+        return copy.deepcopy(exbox[:lz+length*2, :ly+length*2, :lx+length*2].reshape(1, 1, lz+length*2, ly+length*2, lx+length*2))
+        #return copy.deepcopy(exbox[length:lz+length*2, length:ly+length*2, length:lx+length*2].reshape(1, 1, lz+length, ly+length, lx+length))
+
     elif image.ndim == 4:
         _, lz, ly, lx = image.shape
-        exbox = np.pad(image, pad_width=length, mode='reflect')
-        return copy.deepcopy(exbox[:, length:lz+length*2, length:ly+length*2, length:lx+length*2])
+        exbox = np.pad(image[0], pad_width=length, mode='reflect')
+        return copy.deepcopy(exbox[:lz+length*2, :ly+length*2, :lx+length*2].reshape(1, lz+length*2, ly+length*2, lx+length*2))
+        #return copy.deepcopy(exbox[length:lz+length*2, length:ly+length*2, length:lx+length*2].reshape(1, lz+length, ly+length, lx+length))
+
     elif image.ndim == 3:
         lz, ly, lx = image.shape
         exbox = np.pad(image, pad_width=length, mode='reflect')
-        return copy.deepcopy(exbox[length:lz+length*2, length:ly+length*2, length:lx+length*2])
+        return copy.deepcopy(exbox[:lz+length*2, :ly+length*2, :lx+length*2])
+        #return copy.deepcopy(exbox[length:lz+length*2, length:ly+length*2, length:lx+length*2])
+
     else:
         print('Not corresponding to input image ndim in def mirror_extension_image()')
         sys.exit()

@@ -31,9 +31,11 @@ def read_img(path, arr_type='npz'):
 def crop_pair_3d(
         image1,
         image2,
-        crop_size=(96, 96, 96),
-        nonzero_image1_thr=0.001,
-        nonzero_image2_thr=0.001,
+        crop_size=(104, 104, 104),
+        #nonzero_image1_thr=0.001,
+        nonzero_image1_thr=0.0,
+        #nonzero_image2_thr=0.001,
+        nonzero_image2_thr=0.0,
         nb_crop=1,
         augmentation=True
     ):

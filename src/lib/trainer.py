@@ -5,6 +5,7 @@ import copy
 import csv
 import time
 import sys
+import skimage.io as io
 from skimage import morphology
 
 import chainer
@@ -29,7 +30,7 @@ class NSNTrainer():
     ):
         self.model = model
         self.epoch = epoch
-        self.patchsize = patchsize[0]
+        self.patchsize = patchsize
         self.batchsize = batchsize
         self.gpu = gpu
         self.opbase = opbase
@@ -198,6 +199,7 @@ class NSNTrainer():
 
 
     def _validater(self, dataset_iter, epoch):
+        TP, TN, FP, FN = 0, 0, 0, 0
         dataset_iter.reset()
         N = dataset_iter.dataset.__len__()
         sum_loss = 0
@@ -208,37 +210,54 @@ class NSNTrainer():
             else:
                 x_batch, y_batch = dataset_iter.next()[0][0] - self.mean_image, dataset_iter.next()[0][1]
 
-            im_size = np.shape(x_batch)
-            stride = self.patchsize / 2
-            if self.patchsize > np.max(im_size):
-                pad_size = self.patchsize
-            else:
-                if (np.max(im_size) - self.patchsize) % stride == 0:
-                    stride_num = (np.max(im_size) - self.patchsize) / stride
-                else:
-                    stride_num = (np.max(im_size) - self.patchsize) / stride + 1
-                pad_size = stride * stride_num + self.patchsize
-            image = mirror_extension_image(image=x_batch, length=int(self.patchsize))[0:pad_size, 0:pad_size, 0:pad_size]
-            pre_img = np.zeros((x_batch.shape[2:]))
+            im_size = x_batch.shape[2:]
+            stride = [self.patchsize[0]/2, self.patchsize[1]/2, self.patchsize[2]/2]
+            sh = [stride[0]/2, stride[1]/2, stride[2]/2]
 
-            for z in range(0, pad_size-stride, stride):
-                for y in range(0, pad_size-stride, stride):
-                    for x in range(0, pad_size-stride, stride):
-                        x_patch = x_batch[:, :, z:z+self.patchsize, y:y+self.patchsize, x:x+self.patchsize]
-                        x_patch = x_patch.reshape(1, 1, self.patchsize, self.patchsize, self.patchsize).astype(np.float32)
+            if np.min(self.patchsize) > np.max(im_size):
+                pad_size = [self.patchsize[0], self.patchsize[1], self.patchsize[2]]
+            else:
+                ''' calculation for pad size'''
+                pad_size = []
+                for axis in range(len(im_size)):
+                    if (im_size[axis] - self.patchsize[axis]) % stride[axis] == 0:
+                        stride_num = (im_size[axis] - self.patchsize[axis]) / stride[axis]
+                    else:
+                        stride_num = (im_size[axis] - self.patchsize[axis]) / stride[axis] + 1
+                    pad_size.append(stride[axis] * stride_num + self.patchsize[axis])
+
+            gt = copy.deepcopy(y_batch)
+            x_batch = mirror_extension_image(image=x_batch, length=int(np.max(self.patchsize)))[:, :, self.patchsize[0]-sh[0]:self.patchsize[0]-sh[0]+pad_size[0], self.patchsize[1]-sh[1]:self.patchsize[1]-sh[1]+pad_size[1], self.patchsize[2]-sh[2]:self.patchsize[2]-sh[2]+pad_size[2]]
+            y_batch = mirror_extension_image(image=y_batch, length=int(np.max(self.patchsize)))[:, self.patchsize[0]-sh[0]:self.patchsize[0]-sh[0]+pad_size[0], self.patchsize[1]-sh[1]:self.patchsize[1]-sh[1]+pad_size[1], self.patchsize[2]-sh[2]:self.patchsize[2]-sh[2]+pad_size[2]]
+            pre_img = np.zeros((x_batch.shape[2:]))
+            print('x_batch: {}'.format(x_batch.shape))
+            print('y_batch: {}'.format(y_batch.shape))
+
+            for z in range(0, pad_size[0]-stride[0], stride[0]):
+                for y in range(0, pad_size[1]-stride[1], stride[1]):
+                    for x in range(0, pad_size[2]-stride[2], stride[2]):
+                        x_patch = x_batch[:, :, z:z+self.patchsize[0], y:y+self.patchsize[1], x:x+self.patchsize[2]]
+                        y_patch = y_batch[:, z:z+self.patchsize[0], y:y+self.patchsize[1], x:x+self.patchsize[2]]
+                        print('x_patch: {}'.format(x_patch.shape))
+                        print('y_patch: {}'.format(y_patch.shape))
+                        #x_patch = x_patch.reshape(1, 1, self.patchsize, self.patchsize, self.patchsize).astype(np.float32)
                         if self.gpu >= 0:
                             x_patch = cuda.to_gpu(x_patch)
-                        s_loss, s_output = self.model(x_patch, seg=False)
+                            y_patch = cuda.to_gpu(y_patch)
+                        s_loss, s_output = self.model(x=x_patch, t=y_patch, seg=False)
                         sum_loss += float(cuda.to_cpu(s_loss.data) * self.batchsize)
                         if self.gpu >= 0:
                             s_output = cuda.to_cpu(s_output)
                         pred = copy.deepcopy((0 < (s_output[0][1] - s_output[0][0])) * 255)
                         # Add segmentation image
-                        pre_img[z:z+self.patchsize, y:y+self.patchsize, x:x+self.patchsize] += pred
-            seg_img = (pre_img > 0) * 255
+                        pre_img[z:z+self.patchsize[0]-stride[0], y:y+self.patchsize[1]-stride[1], x:x+self.patchsize[2]-stride[2]] += pred[sh[0]:-sh[0], sh[1]:-sh[1], sh[2]:-sh[2]]
+            seg_img = (pre_img > 0) * 1
             seg_img = seg_img[0:im_size[0], 0:im_size[1], 0:im_size[2]]
-            countListPos = copy.deepcopy(seg_img + y_batch)
-            countListNeg = copy.deepcopy(seg_img - y_batch)
+            gt = gt[0]
+            io.imsave('{}/segimg{}_validation.tif'.format(self.opbase, num), np.array(seg_img * 255).astype(np.uint8))
+            io.imsave('{}/gtimg{}_validation.tif'.format(self.opbase, num), np.array(gt * 255).astype(np.uint8))
+            countListPos = copy.deepcopy(seg_img + gt)
+            countListNeg = copy.deepcopy(seg_img - gt)
             TP += len(np.where(countListPos.reshape(countListPos.size)==2)[0])
             TN += len(np.where(countListPos.reshape(countListPos.size)==0)[0])
             FP += len(np.where(countListNeg.reshape(countListNeg.size)==1)[0])
