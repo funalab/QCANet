@@ -1,9 +1,12 @@
 # MacOSX
 .DS_Store
 
+
 #Output
-result_*
+result*
 src/result_*
+models*
+
 
 #Python
 src/*.pyc

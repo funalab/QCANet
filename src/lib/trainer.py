@@ -229,7 +229,7 @@ class NSNTrainer():
             gt = copy.deepcopy(y_batch)
             x_batch = mirror_extension_image(image=x_batch, length=int(np.max(self.patchsize)))[:, :, self.patchsize[0]-sh[0]:self.patchsize[0]-sh[0]+pad_size[0], self.patchsize[1]-sh[1]:self.patchsize[1]-sh[1]+pad_size[1], self.patchsize[2]-sh[2]:self.patchsize[2]-sh[2]+pad_size[2]]
             y_batch = mirror_extension_image(image=y_batch, length=int(np.max(self.patchsize)))[:, self.patchsize[0]-sh[0]:self.patchsize[0]-sh[0]+pad_size[0], self.patchsize[1]-sh[1]:self.patchsize[1]-sh[1]+pad_size[1], self.patchsize[2]-sh[2]:self.patchsize[2]-sh[2]+pad_size[2]]
-            pre_img = np.zeros(im_size)
+            pre_img = np.zeros(pad_size)
             print('x_batch: {}'.format(x_batch.shape))
             print('y_batch: {}'.format(y_batch.shape))
 
@@ -253,7 +253,7 @@ class NSNTrainer():
                         io.imsave('{}/pred_num{}_z{}_y{}_x{}_validation.tif'.format(self.opbase, num, z, y, x), np.array(pred).astype(np.uint8))
                         pre_img[z:z+stride[0], y:y+stride[1], x:x+stride[2]] += pred[sh[0]:-sh[0], sh[1]:-sh[1], sh[2]:-sh[2]]
             seg_img = (pre_img > 0) * 1
-            seg_img = seg_img[0:im_size[0], 0:im_size[1], 0:im_size[2]]
+            seg_img = seg_img[:im_size[0], :im_size[1], :im_size[2]]
             gt = gt[0]
             io.imsave('{}/segimg{}_validation.tif'.format(self.opbase, num), np.array(seg_img * 255).astype(np.uint8))
             io.imsave('{}/gtimg{}_validation.tif'.format(self.opbase, num), np.array(gt * 255).astype(np.uint8))
