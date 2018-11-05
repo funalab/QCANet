@@ -59,7 +59,7 @@ def get_model(args):
             class_weight=eval(args.class_weight),
             n_class=args.ch_out,
             init_channel=args.ch_base,
-            kernel_size=3,
+            kernel_size=5,
             pool_size=2,
             ap_factor=2,
             gpu=args.gpu

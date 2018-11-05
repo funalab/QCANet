@@ -229,7 +229,7 @@ class NSNTrainer():
             gt = copy.deepcopy(y_batch)
             x_batch = mirror_extension_image(image=x_batch, length=int(np.max(self.patchsize)))[:, :, self.patchsize[0]-sh[0]:self.patchsize[0]-sh[0]+pad_size[0], self.patchsize[1]-sh[1]:self.patchsize[1]-sh[1]+pad_size[1], self.patchsize[2]-sh[2]:self.patchsize[2]-sh[2]+pad_size[2]]
             y_batch = mirror_extension_image(image=y_batch, length=int(np.max(self.patchsize)))[:, self.patchsize[0]-sh[0]:self.patchsize[0]-sh[0]+pad_size[0], self.patchsize[1]-sh[1]:self.patchsize[1]-sh[1]+pad_size[1], self.patchsize[2]-sh[2]:self.patchsize[2]-sh[2]+pad_size[2]]
-            pre_img = np.zeros((x_batch.shape[2:]))
+            pre_img = np.zeros(im_size)
             print('x_batch: {}'.format(x_batch.shape))
             print('y_batch: {}'.format(y_batch.shape))
 
@@ -250,7 +250,8 @@ class NSNTrainer():
                             s_output = cuda.to_cpu(s_output)
                         pred = copy.deepcopy((0 < (s_output[0][1] - s_output[0][0])) * 255)
                         # Add segmentation image
-                        pre_img[z:z+self.patchsize[0]-stride[0], y:y+self.patchsize[1]-stride[1], x:x+self.patchsize[2]-stride[2]] += pred[sh[0]:-sh[0], sh[1]:-sh[1], sh[2]:-sh[2]]
+                        io.imsave('{}/pred{}_{}_{}_validation.tif'.format(self.opbase, z, y, x), np.array(pred).astype(np.uint8))
+                        pre_img[z:z+stride[0], y:y+stride[1], x:x+stride[2]] += pred[sh[0]:-sh[0], sh[1]:-sh[1], sh[2]:-sh[2]]
             seg_img = (pre_img > 0) * 1
             seg_img = seg_img[0:im_size[0], 0:im_size[1], 0:im_size[2]]
             gt = gt[0]
@@ -433,7 +434,7 @@ class NDNTrainer():
 
 
     def _trainer(self, dataset_iter, opt_ndn, epoch):
-        TP, TN, FP, FN = 0, 0, 0, 0
+        TP, numPR, numGT = 0, 0, 0
         dataset_iter.reset()
         N = dataset_iter.dataset.__len__()
         sum_loss = 0
