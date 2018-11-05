@@ -233,9 +233,9 @@ class NSNTrainer():
             print('x_batch: {}'.format(x_batch.shape))
             print('y_batch: {}'.format(y_batch.shape))
 
-            for z in range(0, pad_size[0]-stride[0], stride[0]):
-                for y in range(0, pad_size[1]-stride[1], stride[1]):
-                    for x in range(0, pad_size[2]-stride[2], stride[2]):
+            for z in range(0, pad_size[0]-self.patchsize[0], stride[0]):
+                for y in range(0, pad_size[1]-self.patchsize[1], stride[1]):
+                    for x in range(0, pad_size[2]-self.patchsize[2], stride[2]):
                         x_patch = x_batch[:, :, z:z+self.patchsize[0], y:y+self.patchsize[1], x:x+self.patchsize[2]]
                         y_patch = y_batch[:, z:z+self.patchsize[0], y:y+self.patchsize[1], x:x+self.patchsize[2]]
                         print('x_patch: {}'.format(x_patch.shape))
@@ -462,14 +462,52 @@ class NDNTrainer():
                 s_output = cuda.to_cpu(s_output)
             #make pred (0 : background, 1 : object)
             pred = copy.deepcopy((0 < (s_output[0][1] - s_output[0][0])) * 1)
-            countListPos = copy.deepcopy(pred + y_patch)
-            countListNeg = copy.deepcopy(pred - y_patch)
-            TP += len(np.where(countListPos.reshape(countListPos.size)==2)[0])
-            TN += len(np.where(countListPos.reshape(countListPos.size)==0)[0])
-            FP += len(np.where(countListNeg.reshape(countListNeg.size)==1)[0])
-            FN += len(np.where(countListNeg.reshape(countListNeg.size)==-1)[0])
+            if epoch > 20:
+                #make Centroid Pred (0 : background, 1 : object)
+                markers_pr = morphology.label(seg_img, neighbors=4)
+                mask_size = np.unique(markers_pr, return_counts=True)[1] < (self.delv + 1)
+                remove_voxel = mask_size[markers_pr]
+                markers_pr[remove_voxel] = 0
+                labels = np.unique(markers_pr)
+                markers_pr = np.searchsorted(labels, markers_pr)
+                numPR += np.max(markers_pr)
+                center_pr = np.zeros((np.max(markers_pr), 3))
+                count_pr = np.zeros(np.max(markers_pr)).reshape(np.max(markers_pr), 1)
+                # make Centroid GT
+                markers_gt = morphology.label(gt, neighbors=4)
+                numGT += np.max(markers_gt)
+                center_gt = np.zeros((np.max(markers_gt), 3))
+                count_gt = np.zeros(np.max(markers_gt)).reshape(np.max(markers_gt), 1)
+                z, y, x = np.shape(y_patch)
+                for i in range(z):
+                    for j in range(y):
+                        for k in range(x):
+                            if markers_pr[i][j][k] > 0:
+                                center_pr[markers_pr[i][j][k]-1][0] += k
+                                center_pr[markers_pr[i][j][k]-1][1] += j
+                                center_pr[markers_pr[i][j][k]-1][2] += i
+                                count_pr[markers_pr[i][j][k]-1] += 1
+                            if markers_gt[i][j][k] > 0:
+                                center_gt[markers_gt[i][j][k]-1][0] += k
+                                center_gt[markers_gt[i][j][k]-1][1] += j
+                                center_gt[markers_gt[i][j][k]-1][2] += i
+                                count_gt[markers_gt[i][j][k]-1] += 1
+                center_pr /= count_pr
+                center_gt /= count_gt
+                pare = []
+                for gn in range(len(center_gt)):
+                    tmp = 0
+                    chaild = []
+                    for pn in range(len(center_pr)):
+                        if np.sum((center_gt[gn] - center_pr[pn])**2) < self.r_thr**2:
+                            chaild.append(pn)
+                            tmp += 1
+                    if tmp > 0:
+                        pare.append(chaild)
+                used = np.zeros(len(center_pr))
+                TP += self._search_list(pare, used, 0)
 
-        evals = self._evaluator(TP, TN, FP, FN)
+        evals = self._evaluator(TP, numPR, numGT)
         return evals, sum_loss
 
 
@@ -506,9 +544,9 @@ class NDNTrainer():
             y_batch = mirror_extension_image(image=y_batch, length=int(np.max(self.patchsize)))[:, self.patchsize[0]-sh[0]:self.patchsize[0]-sh[0]+pad_size[0], self.patchsize[1]-sh[1]:self.patchsize[1]-sh[1]+pad_size[1], self.patchsize[2]-sh[2]:self.patchsize[2]-sh[2]+pad_size[2]]
             pre_img = np.zeros((x_batch.shape[2:]))
 
-            for z in range(0, pad_size[0]-stride[0], stride[0]):
-                for y in range(0, pad_size[1]-stride[1], stride[1]):
-                    for x in range(0, pad_size[2]-stride[2], stride[2]):
+            for z in range(0, pad_size[0]-self.patchsize[0], stride[0]):
+                for y in range(0, pad_size[1]-self.patchsize[1], stride[1]):
+                    for x in range(0, pad_size[2]-self.patchsize[2], stride[2]):
                         x_patch = x_batch[:, :, z:z+self.patchsize[0], y:y+self.patchsize[1], x:x+self.patchsize[2]]
                         y_patch = y_batch[:, z:z+self.patchsize[0], y:y+self.patchsize[1], x:x+self.patchsize[2]]
                         print('x_patch: {}'.format(x_patch.shape))
