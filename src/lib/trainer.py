@@ -119,13 +119,13 @@ class NSNTrainer():
             if bestRecall <= teseval['Recall']:
                 bestRecall = teseval['Recall']
                 # Save Model
-                model_name = 'NSN_Recall_hdf5_p' + str(self.patchsize) + '.model'
-                serializers.save_hdf5(self.opbase + '/' + model_name, self.model)
+                # model_name = 'NSN_Recall_p' + str(self.patchsize) + '.npz'
+                # serializers.save_npz(self.opbase + '/' + model_name, self.model)
             if bestPrecision <= teseval['Precision']:
                 bestPrecision = teseval['Precision']
                 # Save Model
-                model_name = 'NSN_Precision_hdf5_p' + str(self.patchsize) + '.model'
-                serializers.save_hdf5(self.opbase + '/' + model_name, self.model)
+                # model_name = 'NSN_Precision_p' + str(self.patchsize) + '.npz'
+                # serializers.save_npz(self.opbase + '/' + model_name, self.model)
             if bestSpecificity <= teseval['Specificity']:
                 bestSpecificity = teseval['Specificity']
             if bestFmeasure <= teseval['F-measure']:
@@ -134,8 +134,8 @@ class NSNTrainer():
                 bestIoU = teseval['IoU']
                 bestEpoch = epoch
                 # Save Model
-                model_name = 'NSN_IoU_hdf5_p' + str(self.patchsize) + '.model'
-                serializers.save_hdf5(self.opbase + '/' + model_name, self.model)
+                model_name = 'NSN_IoU_p' + str(self.patchsize) + '.npz'
+                serializers.save_npz(self.opbase + '/' + model_name, self.model)
 
         bestScore = [bestAccuracy, bestRecall, bestPrecision, bestSpecificity, bestFmeasure, bestIoU]
         print('========================================')
@@ -220,11 +220,11 @@ class NSNTrainer():
             else:
                 pad_size = []
                 for axis in range(len(im_size)):
-                    if (im_size[axis] - self.patchsize[axis]) % stride[axis] == 0:
-                        stride_num = (im_size[axis] - self.patchsize[axis]) / stride[axis]
+                    if (im_size[axis] + 2*sh[axis] - self.patchsize[axis]) % stride[axis] == 0:
+                        stride_num = (im_size[axis] + 2*sh[axis] - self.patchsize[axis]) / stride[axis]
                     else:
-                        stride_num = (im_size[axis] - self.patchsize[axis]) / stride[axis] + 1
-                    pad_size.append(stride[axis] * stride_num + self.patchsize[axis] + sh[axis])
+                        stride_num = (im_size[axis] + 2*sh[axis] - self.patchsize[axis]) / stride[axis] + 1
+                    pad_size.append(stride[axis] * stride_num + self.patchsize[axis])
 
             gt = copy.deepcopy(y_batch)
             x_batch = mirror_extension_image(image=x_batch, length=int(np.max(self.patchsize)))[:, :, self.patchsize[0]-sh[0]:self.patchsize[0]-sh[0]+pad_size[0], self.patchsize[1]-sh[1]:self.patchsize[1]-sh[1]+pad_size[1], self.patchsize[2]-sh[2]:self.patchsize[2]-sh[2]+pad_size[2]]
@@ -233,9 +233,9 @@ class NSNTrainer():
             print('x_batch: {}'.format(x_batch.shape))
             print('y_batch: {}'.format(y_batch.shape))
 
-            for z in range(0, pad_size[0]-self.patchsize[0], stride[0]):
-                for y in range(0, pad_size[1]-self.patchsize[1], stride[1]):
-                    for x in range(0, pad_size[2]-self.patchsize[2], stride[2]):
+            for z in range(0, pad_size[0]-stride[0], stride[0]):
+                for y in range(0, pad_size[1]-stride[1], stride[1]):
+                    for x in range(0, pad_size[2]-stride[2], stride[2]):
                         x_patch = x_batch[:, :, z:z+self.patchsize[0], y:y+self.patchsize[1], x:x+self.patchsize[2]]
                         y_patch = y_batch[:, z:z+self.patchsize[0], y:y+self.patchsize[1], x:x+self.patchsize[2]]
                         print('x_patch: {}'.format(x_patch.shape))
@@ -250,7 +250,7 @@ class NSNTrainer():
                             s_output = cuda.to_cpu(s_output)
                         pred = copy.deepcopy((0 < (s_output[0][1] - s_output[0][0])) * 255)
                         # Add segmentation image
-                        io.imsave('{}/pred{}_{}_{}_validation.tif'.format(self.opbase, z, y, x), np.array(pred).astype(np.uint8))
+                        io.imsave('{}/pred_num{}_z{}_y{}_x{}_validation.tif'.format(self.opbase, num, z, y, x), np.array(pred).astype(np.uint8))
                         pre_img[z:z+stride[0], y:y+stride[1], x:x+stride[2]] += pred[sh[0]:-sh[0], sh[1]:-sh[1], sh[2]:-sh[2]]
             seg_img = (pre_img > 0) * 1
             seg_img = seg_img[0:im_size[0], 0:im_size[1], 0:im_size[2]]
@@ -400,19 +400,19 @@ class NDNTrainer():
             if bestRecall <= teseval['Recall']:
                 bestRecall = teseval['Recall']
                 # Save Model
-                model_name = 'NDN_Recall_hdf5_p' + str(self.patchsize) + '_k' + str(kc+1) + '.model'
-                serializers.save_hdf5(self.opbase + '/' + model_name, self.model)
+                # model_name = 'NDN_Recall_p' + str(self.patchsize) + '.npz'
+                # serializers.save_npz(self.opbase + '/' + model_name, self.model)
             if bestPrecision <= teseval['Precision']:
                 bestPrecision = teseval['Precision']
                 # Save Model
-                smodelfile = 'NDN_Precision_hdf5_p' + str(self.patchsize) + '_k' + str(kc+1) + '.model'
-                serializers.save_hdf5(self.opbase + '/' + model_name, self.model)
+                # smodelfile = 'NDN_Precision_p' + str(self.patchsize) + '.npz'
+                # serializers.save_npz(self.opbase + '/' + model_name, self.model)
             if bestFmeasure <= teseval['F-measure']:
                 bestFmeasure = teseval['F-measure']
                 bestEpoch = epoch
                 # Save Model
-                model_name = 'NDN_Fmeasure_hdf5_p' + str(self.patchsize) + '_k' + str(kc+1) + '.model'
-                serializers.save_hdf5(self.opbase + '/' + model_name, self.model)
+                model_name = 'NDN_Fmeasure_p' + str(self.patchsize) + '.npz'
+                serializers.save_npz(self.opbase + '/' + model_name, self.model)
             if bestIoU <= teseval['IoU']:
                 bestIoU = teseval['IoU']
 
@@ -534,20 +534,20 @@ class NDNTrainer():
             else:
                 pad_size = []
                 for axis in range(len(im_size)):
-                    if (im_size[axis] - self.patchsize[axis]) % stride[axis] == 0:
-                        stride_num = (im_size[axis] - self.patchsize[axis]) / stride[axis]
+                    if (im_size[axis] + 2*sh[axis] - self.patchsize[axis]) % stride[axis] == 0:
+                        stride_num = (im_size[axis] + 2*sh[axis] - self.patchsize[axis]) / stride[axis]
                     else:
-                        stride_num = (im_size[axis] - self.patchsize[axis]) / stride[axis] + 1
-                    pad_size.append(stride[axis] * stride_num + self.patchsize[axis] + sh[axis])
+                        stride_num = (im_size[axis] + 2*sh[axis] - self.patchsize[axis]) / stride[axis] + 1
+                    pad_size.append(stride[axis] * stride_num + self.patchsize[axis])
 
             gt = copy.deepcopy(y_batch)
             x_batch = mirror_extension_image(image=x_batch, length=int(np.max(self.patchsize)))[:, :, self.patchsize[0]-sh[0]:self.patchsize[0]-sh[0]+pad_size[0], self.patchsize[1]-sh[1]:self.patchsize[1]-sh[1]+pad_size[1], self.patchsize[2]-sh[2]:self.patchsize[2]-sh[2]+pad_size[2]]
             y_batch = mirror_extension_image(image=y_batch, length=int(np.max(self.patchsize)))[:, self.patchsize[0]-sh[0]:self.patchsize[0]-sh[0]+pad_size[0], self.patchsize[1]-sh[1]:self.patchsize[1]-sh[1]+pad_size[1], self.patchsize[2]-sh[2]:self.patchsize[2]-sh[2]+pad_size[2]]
             pre_img = np.zeros((x_batch.shape[2:]))
 
-            for z in range(0, pad_size[0]-self.patchsize[0], stride[0]):
-                for y in range(0, pad_size[1]-self.patchsize[1], stride[1]):
-                    for x in range(0, pad_size[2]-self.patchsize[2], stride[2]):
+            for z in range(0, pad_size[0]-stride[0], stride[0]):
+                for y in range(0, pad_size[1]-stride[1], stride[1]):
+                    for x in range(0, pad_size[2]-stride[2], stride[2]):
                         x_patch = x_batch[:, :, z:z+self.patchsize[0], y:y+self.patchsize[1], x:x+self.patchsize[2]]
                         y_patch = y_batch[:, z:z+self.patchsize[0], y:y+self.patchsize[1], x:x+self.patchsize[2]]
                         print('x_patch: {}'.format(x_patch.shape))
