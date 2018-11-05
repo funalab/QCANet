@@ -126,7 +126,9 @@ def main():
             gpu=args.gpu,
             opbase=opbase,
             mean_image=mean_image,
-            opt_method=args.optimizer
+            opt_method=args.optimizer,
+            delv=3,
+            r_thr=10
         )
     train_eval, test_eval, best_score = trainer.training((train_iterator, validation_iterator))
 
