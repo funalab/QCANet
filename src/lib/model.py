@@ -28,6 +28,7 @@ class Model_L2(Chain):
         else:
             self.class_weight = np.array(class_weight).astype(np.float32)
         self.train = True
+        self.loss_func = loss_func
         initializer = chainer.initializers.HeNormal()
         super(Model_L2, self).__init__(
 
@@ -98,7 +99,8 @@ class Model_L2(Chain):
             del h
             return pred.data
         else:
-            loss = eval(loss_func)(h, t, class_weight=self.class_weight)
+            #loss = eval(self.loss_func)(h, t, class_weight=self.class_weight)
+            loss = eval(self.loss_func)(h, t)
             pred = F.softmax(h)
             del h
             return loss, pred.data
@@ -124,6 +126,7 @@ class Model_L3(Chain):
         else:
             self.class_weight = np.array(class_weight).astype(np.float32)
         self.train = True
+        self.loss_func = loss_func
         initializer = chainer.initializers.HeNormal()
         super(Model_L3, self).__init__(
 
@@ -215,7 +218,8 @@ class Model_L3(Chain):
             del h
             return pred.data
         else:
-            loss = eval(loss_func)(h, t, class_weight=self.class_weight)
+            #loss = eval(self.loss_func)(h, t, class_weight=self.class_weight)
+            loss = eval(self.loss_func)(h, t)
             pred = F.softmax(h)
             del h
             return loss, pred.data
@@ -241,6 +245,7 @@ class Model_L4(Chain):
         else:
             self.class_weight = np.array(class_weight).astype(np.float32)
         self.train = True
+        self.loss_func = loss_func
         initializer = chainer.initializers.HeNormal()
         super(Model_L4, self).__init__(
 
@@ -353,7 +358,8 @@ class Model_L4(Chain):
             del h
             return pred.data
         else:
-            loss = eval(loss_func)(h, t, class_weight=self.class_weight)
+            #loss = eval(self.loss_func)(h, t, class_weight=self.class_weight)
+            loss = eval(self.loss_func)(h, t)
             pred = F.softmax(h)
             del h
             return loss, pred.data

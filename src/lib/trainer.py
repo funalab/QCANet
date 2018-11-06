@@ -230,17 +230,12 @@ class NSNTrainer():
             x_batch = mirror_extension_image(image=x_batch, length=int(np.max(self.patchsize)))[:, :, self.patchsize[0]-sh[0]:self.patchsize[0]-sh[0]+pad_size[0], self.patchsize[1]-sh[1]:self.patchsize[1]-sh[1]+pad_size[1], self.patchsize[2]-sh[2]:self.patchsize[2]-sh[2]+pad_size[2]]
             y_batch = mirror_extension_image(image=y_batch, length=int(np.max(self.patchsize)))[:, self.patchsize[0]-sh[0]:self.patchsize[0]-sh[0]+pad_size[0], self.patchsize[1]-sh[1]:self.patchsize[1]-sh[1]+pad_size[1], self.patchsize[2]-sh[2]:self.patchsize[2]-sh[2]+pad_size[2]]
             pre_img = np.zeros(pad_size)
-            print('x_batch: {}'.format(x_batch.shape))
-            print('y_batch: {}'.format(y_batch.shape))
 
             for z in range(0, pad_size[0]-stride[0], stride[0]):
                 for y in range(0, pad_size[1]-stride[1], stride[1]):
                     for x in range(0, pad_size[2]-stride[2], stride[2]):
                         x_patch = x_batch[:, :, z:z+self.patchsize[0], y:y+self.patchsize[1], x:x+self.patchsize[2]]
                         y_patch = y_batch[:, z:z+self.patchsize[0], y:y+self.patchsize[1], x:x+self.patchsize[2]]
-                        print('x_patch: {}'.format(x_patch.shape))
-                        print('y_patch: {}'.format(y_patch.shape))
-                        #x_patch = x_patch.reshape(1, 1, self.patchsize, self.patchsize, self.patchsize).astype(np.float32)
                         if self.gpu >= 0:
                             x_patch = cuda.to_gpu(x_patch)
                             y_patch = cuda.to_gpu(y_patch)
@@ -250,7 +245,6 @@ class NSNTrainer():
                             s_output = cuda.to_cpu(s_output)
                         pred = copy.deepcopy((0 < (s_output[0][1] - s_output[0][0])) * 255)
                         # Add segmentation image
-                        io.imsave('{}/pred_num{}_z{}_y{}_x{}_validation.tif'.format(self.opbase, num, z, y, x), np.array(pred).astype(np.uint8))
                         pre_img[z:z+stride[0], y:y+stride[1], x:x+stride[2]] += pred[sh[0]:-sh[0], sh[1]:-sh[1], sh[2]:-sh[2]]
             seg_img = (pre_img > 0) * 1
             seg_img = seg_img[:im_size[0], :im_size[1], :im_size[2]]
@@ -459,13 +453,13 @@ class NDNTrainer():
             sum_loss += float(cuda.to_cpu(s_loss.data) * self.batchsize)
 
             if self.gpu >= 0:
-                y_patch = cuda.to_cpu(y_patch)
+                y_patch = cuda.to_cpu(y_patch[0])
                 s_output = cuda.to_cpu(s_output)
             #make pred (0 : background, 1 : object)
             pred = copy.deepcopy((0 < (s_output[0][1] - s_output[0][0])) * 1)
-            if epoch > 20:
+            if epoch > 0:
                 #make Centroid Pred (0 : background, 1 : object)
-                markers_pr = morphology.label(seg_img, neighbors=4)
+                markers_pr = morphology.label(pred, neighbors=4)
                 mask_size = np.unique(markers_pr, return_counts=True)[1] < (self.delv + 1)
                 remove_voxel = mask_size[markers_pr]
                 markers_pr[remove_voxel] = 0
@@ -475,7 +469,7 @@ class NDNTrainer():
                 center_pr = np.zeros((np.max(markers_pr), 3))
                 count_pr = np.zeros(np.max(markers_pr)).reshape(np.max(markers_pr), 1)
                 # make Centroid GT
-                markers_gt = morphology.label(gt, neighbors=4)
+                markers_gt = morphology.label(y_patch, neighbors=4)
                 numGT += np.max(markers_gt)
                 center_gt = np.zeros((np.max(markers_gt), 3))
                 count_gt = np.zeros(np.max(markers_gt)).reshape(np.max(markers_gt), 1)
@@ -543,16 +537,13 @@ class NDNTrainer():
             gt = copy.deepcopy(y_batch)
             x_batch = mirror_extension_image(image=x_batch, length=int(np.max(self.patchsize)))[:, :, self.patchsize[0]-sh[0]:self.patchsize[0]-sh[0]+pad_size[0], self.patchsize[1]-sh[1]:self.patchsize[1]-sh[1]+pad_size[1], self.patchsize[2]-sh[2]:self.patchsize[2]-sh[2]+pad_size[2]]
             y_batch = mirror_extension_image(image=y_batch, length=int(np.max(self.patchsize)))[:, self.patchsize[0]-sh[0]:self.patchsize[0]-sh[0]+pad_size[0], self.patchsize[1]-sh[1]:self.patchsize[1]-sh[1]+pad_size[1], self.patchsize[2]-sh[2]:self.patchsize[2]-sh[2]+pad_size[2]]
-            pre_img = np.zeros((x_batch.shape[2:]))
+            pre_img = np.zeros(pad_size)
 
             for z in range(0, pad_size[0]-stride[0], stride[0]):
                 for y in range(0, pad_size[1]-stride[1], stride[1]):
                     for x in range(0, pad_size[2]-stride[2], stride[2]):
                         x_patch = x_batch[:, :, z:z+self.patchsize[0], y:y+self.patchsize[1], x:x+self.patchsize[2]]
                         y_patch = y_batch[:, z:z+self.patchsize[0], y:y+self.patchsize[1], x:x+self.patchsize[2]]
-                        print('x_patch: {}'.format(x_patch.shape))
-                        print('y_patch: {}'.format(y_patch.shape))
-                        #x_patch = x_patch.reshape(1, 1, self.patchsize, self.patchsize, self.patchsize).astype(np.float32)
                         if self.gpu >= 0:
                             x_patch = cuda.to_gpu(x_patch)
                             y_patch = cuda.to_gpu(y_patch)
@@ -569,7 +560,7 @@ class NDNTrainer():
             io.imsave('{}/segimg{}_validation.tif'.format(self.opbase, num), np.array(seg_img * 255).astype(np.uint8))
             io.imsave('{}/gtimg{}_validation.tif'.format(self.opbase, num), np.array(gt * 255).astype(np.uint8))
 
-            if epoch > 20:
+            if epoch > 0:
                 #make Centroid Pred (0 : background, 1 : object)
                 markers_pr = morphology.label(seg_img, neighbors=4)
                 mask_size = np.unique(markers_pr, return_counts=True)[1] < (self.delv + 1)
@@ -585,7 +576,7 @@ class NDNTrainer():
                 numGT += np.max(markers_gt)
                 center_gt = np.zeros((np.max(markers_gt), 3))
                 count_gt = np.zeros(np.max(markers_gt)).reshape(np.max(markers_gt), 1)
-                z, y, x = np.shape(y_patch)
+                z, y, x = np.shape(gt)
                 for i in range(z):
                     for j in range(y):
                         for k in range(x):
