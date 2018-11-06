@@ -6,6 +6,7 @@ from chainer import cuda, Function, Variable
 from chainer import Link, Chain, ChainList
 import chainer.functions as F
 import chainer.links as L
+from src.lib.loss import softmax_dice_loss
 
 class Model_L2(Chain):
     def __init__(
@@ -17,7 +18,8 @@ class Model_L2(Chain):
             pool_size=2,
             ap_factor=2,
             gpu=-1,
-            class_weight=np.array([1, 1]).astype(np.float32)
+            class_weight=np.array([1, 1]).astype(np.float32),
+            loss_func='F.softmax_cross_entropy'
         ):
         self.gpu = gpu
         self.pool_size = pool_size
@@ -96,7 +98,7 @@ class Model_L2(Chain):
             del h
             return pred.data
         else:
-            loss = F.softmax_cross_entropy(h, t, class_weight=self.class_weight)
+            loss = eval(loss_func)(h, t, class_weight=self.class_weight)
             pred = F.softmax(h)
             del h
             return loss, pred.data
@@ -112,7 +114,8 @@ class Model_L3(Chain):
             pool_size=2,
             ap_factor=2,
             gpu=-1,
-            class_weight=np.array([1, 1]).astype(np.float32)
+            class_weight=np.array([1, 1]).astype(np.float32),
+            loss_func='F.softmax_cross_entropy'
         ):
         self.gpu = gpu
         self.pool_size = pool_size
@@ -212,7 +215,7 @@ class Model_L3(Chain):
             del h
             return pred.data
         else:
-            loss = F.softmax_cross_entropy(h, t, class_weight=self.class_weight)
+            loss = eval(loss_func)(h, t, class_weight=self.class_weight)
             pred = F.softmax(h)
             del h
             return loss, pred.data
@@ -228,7 +231,8 @@ class Model_L4(Chain):
             pool_size=2,
             ap_factor=2,
             gpu=-1,
-            class_weight=np.array([1, 1]).astype(np.float32)
+            class_weight=np.array([1, 1]).astype(np.float32),
+            loss_func='F.softmax_cross_entropy'
         ):
         self.gpu = gpu
         self.pool_size = pool_size
@@ -349,7 +353,7 @@ class Model_L4(Chain):
             del h
             return pred.data
         else:
-            loss = F.softmax_cross_entropy(h, t, class_weight=self.class_weight)
+            loss = eval(loss_func)(h, t, class_weight=self.class_weight)
             pred = F.softmax(h)
             del h
             return loss, pred.data

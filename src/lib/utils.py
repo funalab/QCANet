@@ -52,17 +52,20 @@ def get_model(args):
             pool_size=2,
             ap_factor=2,
             gpu=args.gpu,
-            class_weight=eval(args.class_weight)
+            class_weight=eval(args.class_weight),
+            loss_func=args.lossfun
         )
     elif args.model == 'NDN':
         model = Model_L4(
-            class_weight=eval(args.class_weight),
+            ndum=args.ndim,
             n_class=args.ch_out,
             init_channel=args.ch_base,
             kernel_size=5,
             pool_size=2,
             ap_factor=2,
-            gpu=args.gpu
+            gpu=args.gpu,
+            class_weight=eval(args.class_weight),
+            loss_func=args.lossfun
         )
 
     return model
