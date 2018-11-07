@@ -13,6 +13,7 @@ src/*.pyc
 src/lib/*.pyc
 src/tools/*.pyc
 src/lib/__pycache__
+src/tools/__pycache__
 datasets/
 src/__pycache__/
 
