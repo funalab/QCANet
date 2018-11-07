@@ -11,6 +11,7 @@ models*
 #Python
 src/*.pyc
 src/lib/*.pyc
+src/tools/*.pyc
 src/lib/__pycache__
 datasets/
 src/__pycache__/
