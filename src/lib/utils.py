@@ -70,7 +70,6 @@ def get_model(args):
 
     return model
 
-
 def create_dataset_parser(remaining_argv, **conf_dict):
     input_formats = ['tif', 'npz', 'png', 'jpg']
     image_dtypes = ['uint8', 'uint16', 'int32', 'float32']

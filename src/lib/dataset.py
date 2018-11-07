@@ -113,7 +113,7 @@ class PreprocessedDataset(chainer.dataset.DatasetMixin):
         augmentation=True,
         scaling=True,
         resolution=eval('(1.0, 1.0, 2.18)'),
-        crop_size=eval('(104, 104, 104)')
+        crop_size=eval('(96, 96, 96)')
         ):
         self.root_path = root_path
         self.split_list = split_list
