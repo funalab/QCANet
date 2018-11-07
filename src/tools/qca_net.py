@@ -13,10 +13,11 @@ from skimage import io
 from skimage import morphology
 from skimage.morphology import watershed
 from argparse import ArgumentParser
-from lib.model import Model_L2, Model_L3, Model_L4
-from lib.utils import Utils
-from test_nsn import TestNSN
-from test_ndn import TestNDN
+from src.lib.model import Model_L2, Model_L3, Model_L4
+from src.lib.utils import createOpbase
+from src.tools.test_nsn import TestNSN
+from src.tools.test_ndn import TestNDN
+
 
 
 def main():
@@ -44,7 +45,7 @@ def main():
     util = Utils()
     psep = '/'
     
-    opbase = util.createOpbase(args.outdir)
+    opbase = createOpbase(args.outdir)
     wsbase = 'WatershedSegmentationImages'
     if not (pt.exists(opbase + psep + wsbase)):
         os.mkdir(opbase + psep + wsbase)
@@ -71,20 +72,42 @@ def main():
     if args.gpu >= 0:
         class_weight = cuda.to_gpu(class_weight)
     # NSN_SGD
-    nsn = Model_L2(class_weight=class_weight, n_class=2, init_channel=16,
-                   kernel_size=3, pool_size=2, ap_factor=2, gpu=args.gpu)
+    nsn = Model_L2(
+        ndim=3,
+        n_class=2,
+        init_channel=16,
+        kernel_size=3,
+        pool_size=2,
+        ap_factor=2,
+        gpu=args.gpu,
+        class_weight=class_weight
+    )
     # NDN_Adam
-    ndn = Model_L4(class_weight=class_weight, n_class=2, init_channel=12,
-                   kernel_size=5, pool_size=2, ap_factor=2, gpu=args.gpu)
+    ndn = Model_L4(
+        ndim=3,
+        n_class=2,
+        n_class=2,
+        init_channel=12,
+        kernel_size=5,
+        pool_size=2,
+        ap_factor=2,
+        gpu=args.gpu,
+        class_weight=class_weight
+    )
     # Def-NDN_Adam
     # ndn = Model_L3(class_weight=class_weight, n_class=2, init_channel=8,
     #                kernel_size=3, pool_size=2, ap_factor=2, gpu=args.gpu)
 
     # Load Model
+    try:
+        chainer.serializers.load_npz(args.init_model, model)
+    except:
+        chainer.serializers.load_hdf5(args.init_model, model)
+
     if not args.model_nsn == '0':
-        util.loadModel(args.model_nsn, nsn)
+        loadModel(args.model_nsn, nsn)
     if not args.model_ndn == '0':
-        util.loadModel(args.model_ndn, ndn)
+        loadModel(args.model_ndn, ndn)
     if args.gpu >= 0:
         cuda.get_device(args.gpu).use()  # Make a specified GPU current
         nsn.to_gpu()  # Copy the SegmentNucleus model to the GPU

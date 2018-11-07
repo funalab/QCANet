@@ -57,7 +57,7 @@ def get_model(args):
         )
     elif args.model == 'NDN':
         model = Model_L4(
-            ndum=args.ndim,
+            ndim=args.ndim,
             n_class=args.ch_out,
             init_channel=args.ch_base,
             kernel_size=5,
