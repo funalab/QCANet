@@ -47,15 +47,17 @@ class TestNSN():
         image = io.imread(image_path)
         im_size = image.shape
         ip_size = (int(image.shape[0] * self.resolution[2]), int(image.shape[1] * self.resolution[1]), int(image.shape[2] * self.resolution[0]))
+        print('ip_size: {}'.format(ip_size))
         image = tr.resize(image, ip_size, order = 1, preserve_range = True)
         im_size_ip = image.shape
+        print('ip_size: {}'.format(im_size_ip))
         #pre_psize = int(self.patchsize - (self.stride/2))
 
         # Scaling
         if self.scaling:
             image = image.astype(np.float32)
-            image = image / image.max()
-            #image = (image - image.min()) / (image.max() - image.min())
+            #image = image / image.max()
+            image = (image - image.min()) / (image.max() - image.min())
 
         # Extension Image
         # if self.patchsize > np.max(ip_size):
@@ -85,33 +87,33 @@ class TestNSN():
         sh = [self.stride[0]/2, self.stride[1]/2, self.stride[2]/2]
 
         ''' calculation for pad size'''
-        if np.min(self.patchsize) > np.max(im_size):
+        if np.min(self.patchsize) > np.max(np.array(im_size) + np.array(sh)*2):
             pad_size = [self.patchsize[0], self.patchsize[1], self.patchsize[2]]
         else:
             pad_size = []
             for axis in range(len(im_size_ip)):
-                if (ip_size[axis] + 2*sh[axis] - self.patchsize[axis]) % stride[axis] == 0:
-                    stride_num = (im_size_ip[axis] + 2*sh[axis] - self.patchsize[axis]) / stride[axis]
+                if (im_size_ip[axis] + 2*sh[axis] - self.patchsize[axis]) % self.stride[axis] == 0:
+                    stride_num = int((im_size_ip[axis] + 2*sh[axis] - self.patchsize[axis]) / self.stride[axis])
                 else:
-                    stride_num = (im_size_ip[axis] + 2*sh[axis] - self.patchsize[axis]) / stride[axis] + 1
-                pad_size.append(stride[axis] * stride_num + self.patchsize[axis])
+                    stride_num = int((im_size_ip[axis] + 2*sh[axis] - self.patchsize[axis]) / self.stride[axis]) + 1
+                pad_size.append(self.stride[axis] * stride_num + self.patchsize[axis])
 
         image = mirror_extension_image(image=image, length=int(np.max(self.patchsize)))[self.patchsize[0]-sh[0]:self.patchsize[0]-sh[0]+pad_size[0], self.patchsize[1]-sh[1]:self.patchsize[1]-sh[1]+pad_size[1], self.patchsize[2]-sh[2]:self.patchsize[2]-sh[2]+pad_size[2]]
         pre_img = np.zeros(pad_size)
-
-        for z in range(0, pad_size[0]-stride[0], stride[0]):
-            for y in range(0, pad_size[1]-stride[1], stride[1]):
-                for x in range(0, pad_size[2]-stride[2], stride[2]):
-                    image = image[z:z+self.patchsize[0], y:y+self.patchsize[1], x:x+self.patchsize[2]]
-                    image = image.reshape(1, 1, self.patchsize[0], patchsize[1], patchsize[2])
+ 
+        for z in range(0, pad_size[0]-self.stride[0], self.stride[0]):
+            for y in range(0, pad_size[1]-self.stride[1], self.stride[1]):
+                for x in range(0, pad_size[2]-self.stride[2], self.stride[2]):
+                    x_patch = image[z:z+self.patchsize[0], y:y+self.patchsize[1], x:x+self.patchsize[2]]
+                    x_patch = np.expand_dims(np.expand_dims(x_patch.astype(np.float32), axis=0), axis=0)
                     if self.gpu >= 0:
-                        image = cuda.to_gpu(image)
-                    s_output = self.model(x=image, t=None, seg=True)
+                        x_patch = cuda.to_gpu(x_patch)
+                    s_output = self.model(x=x_patch, t=None, seg=True)
                     if self.gpu >= 0:
                         s_output = cuda.to_cpu(s_output)
                     pred = copy.deepcopy((0 < (s_output[0][1] - s_output[0][0])) * 255)
                     # Add segmentation image
-                    pre_img[z:z+stride[0], y:y+stride[1], x:x+stride[2]] += pred[sh[0]:-sh[0], sh[1]:-sh[1], sh[2]:-sh[2]]
+                    pre_img[z:z+self.stride[0], y:y+self.stride[1], x:x+self.stride[2]] += pred[sh[0]:-sh[0], sh[1]:-sh[1], sh[2]:-sh[2]]
 
         seg_img = (pre_img > 0) * 255
         seg_img = seg_img[:im_size_ip[0], :im_size_ip[1], :im_size_ip[2]]

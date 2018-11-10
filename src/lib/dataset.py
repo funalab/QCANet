@@ -31,7 +31,7 @@ def read_img(path, arr_type='npz'):
 def crop_pair_3d(
         image1,
         image2,
-        crop_size=(104, 104, 104),
+        crop_size=(128, 128, 128),
         #nonzero_image1_thr=0.001,
         nonzero_image1_thr=0.0,
         #nonzero_image2_thr=0.001,
@@ -135,11 +135,13 @@ class PreprocessedDataset(chainer.dataset.DatasetMixin):
     def _get_image(self, i):
         image = read_img(os.path.join(self.root_path, 'images_raw', self.img_path[i]), self.arr_type)
         ip_size = (int(image.shape[0] * self.resolution[2]), int(image.shape[1] * self.resolution[1]), int(image.shape[2] * self.resolution[0]))
-        image = tr.resize(image, ip_size, order=1, preserve_range=True)
+        image = tr.resize(image.astype(np.float32), ip_size, order=1, preserve_range=True)
+        pad_size = np.max(np.array(self.crop_size) - np.array(ip_size))
+        if pad_size > 0:
+            image = np.pad(image, pad_width=pad_size, mode='reflect')
         if self.scaling:
-            return image.astype(np.float32) / image.max()
-        else:
-            return image.astype(np.float32)
+            image = (image - image.min()) / (image.max() - image.min())
+        return image.astype(np.float32)
 
     def _get_label(self, i):
         if self.model == 'NSN':
@@ -151,6 +153,9 @@ class PreprocessedDataset(chainer.dataset.DatasetMixin):
             sys.exit()
         ip_size = (int(label.shape[0] * self.resolution[2]), int(label.shape[1] * self.resolution[1]), int(label.shape[2] * self.resolution[0]))
         label = (tr.resize(label, ip_size, order=1, preserve_range=True) > 0) * 1
+        pad_size = np.max(np.array(self.crop_size) - np.array(ip_size))
+        if pad_size > 0:
+            label = np.pad(label, pad_width=pad_size, mode='reflect')
         return label.astype(np.int32)
 
     def get_example(self, i):

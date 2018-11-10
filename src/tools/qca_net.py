@@ -14,6 +14,7 @@ import numpy as np
 import configparser
 from argparse import ArgumentParser
 from os import path as pt
+import skimage.io as io
 from skimage import morphology
 from skimage.morphology import watershed
 from scipy import ndimage
@@ -35,7 +36,7 @@ def main():
     ap.add_argument('--indir', '-i', nargs='?', default='../images/example_input', help='Specify input files directory : Phase contrast cell images in gray scale')
     ap.add_argument('--outdir', '-o', nargs='?', default='result_qca_net', help='Specify output files directory for create segmentation, labeling & classification images')
     ap.add_argument('--model_nsn', '-ms', nargs='?', default='models/p96/nsn/learned_nsn_dice_v1.npz', help='Specify loading file path of Learned Segmentation Model')
-    ap.add_argument('--model_ndn', '-md', nargs='?', default='models/p96/ndn/learned_ndn_softmax_v1.npz', help='Specify loading file path of Learned Detection Model')
+    ap.add_argument('--model_ndn', '-md', nargs='?', default='models/p96/ndn/learned_ndn_dice_v1.npz', help='Specify loading file path of Learned Detection Model')
     ap.add_argument('--gpu', '-g', type=int, default=-1, help='Specify GPU ID (negative value indicates CPU)')
     ap.add_argument('--patchsize_seg', '-ps', type=int, default=96, help='Specify pixel size of Segmentation Patch')
     ap.add_argument('--patchsize_det', '-pd', type=int, default=96, help='Specify pixel size of Detection Patch')
@@ -98,13 +99,15 @@ def main():
     print('Initializing models...')
 
     nsn = get_model(args)
-    # args.model = 'NDN'
-    # args.ch_base = 12
-    # ndn = get_model(args)
+    args.model = 'NDN'
+    args.ch_base = 12
+    ndn = get_model(args)
     if args.model_nsn is not None:
         print('Load NSN from', args.model_nsn)
-        chainer.serializers.load_npz(args.model_nsn, nsn)
-        #chainer.serializers.load_hdf5(args.model_nsn, nsn)
+        try:
+            chainer.serializers.load_npz(args.model_nsn, nsn)
+        except:
+            chainer.serializers.load_hdf5(args.model_nsn, nsn)
     if args.model_ndn is not None:
         print('Load NDN from', args.model_ndn)
         try:
@@ -113,7 +116,8 @@ def main():
             chainer.serializers.load_hdf5(args.model_ndn, ndn)
     if args.gpu >= 0:
         cuda.get_device(args.gpu).use()  # Make a specified GPU current
-        model.to_gpu()  # Copy the SegmentNucleus model to the GPU
+        nsn.to_gpu()  # Copy the SegmentNucleus model to the GPU
+        ndn.to_gpu()
 
     # NSN_SGD
     # nsn = Model_L2(

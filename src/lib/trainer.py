@@ -457,7 +457,7 @@ class NDNTrainer():
                 s_output = cuda.to_cpu(s_output)
             #make pred (0 : background, 1 : object)
             pred = copy.deepcopy((0 < (s_output[0][1] - s_output[0][0])) * 1)
-            if epoch > 0:
+            if epoch > 20:
                 #make Centroid Pred (0 : background, 1 : object)
                 markers_pr = morphology.label(pred, neighbors=4)
                 mask_size = np.unique(markers_pr, return_counts=True)[1] < (self.delv + 1)
