@@ -7,6 +7,7 @@ import random
 import copy
 import math
 import os
+sys.path.append(os.getcwd())
 import os.path as pt
 import numpy as np
 from skimage import io
@@ -15,8 +16,8 @@ from skimage import measure
 from skimage.morphology import watershed
 from scipy import ndimage
 from argparse import ArgumentParser
-from lib.utils import Utils
-from graph_draw import GraphDraw
+from src.lib.utils import createOpbase
+from src.tools.graph_draw import GraphDraw
 
 def main():
     starttime = time.time()
@@ -27,13 +28,12 @@ def main():
     ap.add_argument('--labeling4', action='store_true', help='Specify Labeling Flag (Gray Scale Image)')
     ap.add_argument('--labeling8', action='store_true', help='Specify Labeling Flag (Gray Scale Image)')
     ap.add_argument('--time_slice', '-t', type=int, default=10, help='Specify time slice of time-series data (min)')
-    
+
     args = ap.parse_args()
     opbase = args.outdir
     argvs = sys.argv
-    util = Utils()
     psep = '/'
-    opbase = util.createOpbase(args.outdir)
+    opbase = createOpbase(args.outdir)
 
     with open(opbase + psep + 'result.txt', 'w') as f:
         f.write('python ' + ' '.join(argvs) + '\n')
@@ -54,8 +54,8 @@ def main():
         dlist.pop(dlist.index('.DS_Store'))
     except:
         pass
-    for l in dlist:
-        img = io.imread(args.indir + psep + l)
+    for l in range(len(dlist)):
+        img = io.imread(os.path.join(args.indir, 'ws_t{}.tif'.format(l+1)))
         if args.labeling4:
             img = morphology.label(img, neighbors=4)
         elif args.labeling8:
@@ -92,13 +92,13 @@ def main():
         cent_x.append(x)
         cent_y.append(y)
         cent_z.append(z)
-        
+
         with open(opbase + psep + 'criteria.csv', 'a') as f:
             c = csv.writer(f)
-            c.writerow([dlist.index(l) + 1, nuclei_num, np.sum(nuclei_vol), np.mean(nuclei_vol), np.std(nuclei_vol), np.sum(nuclei_area), np.mean(nuclei_area), np.std(nuclei_area), x, y, z])
+            c.writerow([l + 1, nuclei_num, np.sum(nuclei_vol), np.mean(nuclei_vol), np.std(nuclei_vol), np.sum(nuclei_area), np.mean(nuclei_area), np.std(nuclei_area), x, y, z])
 
         with open(opbase + psep + 'result.txt', 'a') as f:
-            f.write('=============Time Point : ' + str(dlist.index(l) + 1) + '=============\n')
+            f.write('=============Time Point : ' + str(l + 1) + '=============\n')
             f.write('Count : {}\n'.format(nuclei_num))
             f.write('Sum Volume : {}\n'.format(np.sum(nuclei_vol)))
             f.write('Mean Volume : {}\n'.format(np.mean(nuclei_vol)))
@@ -120,6 +120,6 @@ def main():
     gd.graph_draw_surface(Time, sum_area, mean_area, std_area)
     gd.graph_draw_centroid(cent_x, cent_y, cent_z)
 
-    
+
 if __name__ == '__main__':
     main()

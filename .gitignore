@@ -6,6 +6,7 @@
 result*
 src/result_*
 models*
+GT
 
 
 #Python
@@ -22,3 +23,4 @@ src/__pycache__/
 reedbush
 *.e*
 *.o*
+*.tar.gz

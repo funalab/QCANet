@@ -7,6 +7,7 @@ import random
 import copy
 import math
 import os
+sys.path.append(os.getcwd())
 import os.path as pt
 import numpy as np
 import matplotlib.pyplot as plt
@@ -15,7 +16,7 @@ import skimage.io as skimage
 from skimage import transform as tr
 import skimage.morphology as mor
 from argparse import ArgumentParser
-from lib.utils import Utils
+from src.lib.utils import createOpbase
 plt.style.use('ggplot')
 
 
@@ -29,7 +30,7 @@ class GraphDraw():
         self.x = 127
         self.y = 124
         if roi != 0:
-            with open('../GT/10minGroundTruth/CSVfile/test{}.csv'.format(roi), 'r') as f:
+            with open('GT/10minGroundTruth/CSVfile/test{}.csv'.format(roi), 'r') as f:
                 dataReader = csv.reader(f)
                 l = [i for i in dataReader]
                 self.GTCount = []
@@ -42,7 +43,7 @@ class GraphDraw():
         else:
             self.GTCount = None
 
-            
+
     def graph_draw_number(self, Time, Count):
         # Count
         plt.figure()
@@ -62,7 +63,7 @@ class GraphDraw():
         filename = self.opbase + self.psep + 'Count.pdf'
         plt.savefig(filename)
 
-        
+
     def graph_draw_volume(self, Time, SumVol, MeanVol, StdVol):
         SumVol = np.array(SumVol) * self.scale
         MeanVol = np.array(MeanVol) * self.scale
@@ -81,7 +82,7 @@ class GraphDraw():
         filename = self.opbase + self.psep + 'MeanStdVolume.pdf'
         plt.savefig(filename)
 
-        
+
     def graph_draw_surface(self, Time, SumArea, MeanArea, StdArea):
         SumArea = np.array(SumArea) * self.scale
         MeanArea = np.array(MeanArea) * self.scale
@@ -100,7 +101,7 @@ class GraphDraw():
         filename = self.opbase + self.psep + 'MeanStdSurface.pdf'
         plt.savefig(filename)
 
-        
+
     def graph_draw_centroid(self, cent_x, cent_y, cent_z):
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
@@ -118,7 +119,7 @@ class GraphDraw():
         filename = self.opbase + self.psep + 'Centroid.pdf'
         plt.savefig(filename)
 
-        
+
     def graph_draw_centroid_2axis(self, cent_x, cent_y, axis):
         plt.figure()
         if axis is 'XY':
@@ -147,9 +148,9 @@ class GraphDraw():
         elif axis is 'ZX':
             filename = self.opbase + self.psep + 'Centroid-ZX.pdf'
         plt.savefig(filename)
-        
 
-        
+
+
 if __name__ == '__main__':
     ap = ArgumentParser(description='python graph_draw.py')
     ap.add_argument('--input', '-i', nargs='?', default='criteria.csv', help='Specify input files (format : csv)')
@@ -157,9 +158,8 @@ if __name__ == '__main__':
     ap.add_argument('--roi', '-r', type=int, default=0, help='Specify ROI GT')
     args = ap.parse_args()
     argvs = sys.argv
-    util = Utils()
     psep = '/'
-    opbase = util.createOpbase(args.outdir)
+    opbase = createOpbase(args.outdir)
 
     # each criterion
     cnt = []
