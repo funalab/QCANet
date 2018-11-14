@@ -52,6 +52,11 @@ class NSNTrainer():
             opt_nsn.setup(self.model)
             opt_nsn.add_hook(chainer.optimizer.WeightDecay(0.00009))
 
+        elif self.opt_method == 'MomentumSGD':
+            opt_nsn = optimizers.MomentumSGD(lr=0.0001, momentum=0.99)
+            opt_nsn.setup(self.model)
+            #opt_nsn.add_hook(chainer.optimizer.WeightDecay(0.00001))
+
         train_eval, test_eval = {}, {}
         train_eval['loss'], test_eval['loss'] = [], []
         for cri in self.criteria:

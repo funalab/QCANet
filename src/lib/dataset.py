@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import os
+import sys
 import random
 import numpy as np
 from skimage import io
@@ -144,7 +145,7 @@ class PreprocessedDataset(chainer.dataset.DatasetMixin):
         return image.astype(np.float32)
 
     def _get_label(self, i):
-        if self.model == 'NSN':
+        if self.model == 'NSN' or '3DUNet':
             label = read_img(os.path.join(self.root_path, 'images_nsn', self.img_path[i]), self.arr_type)
         elif self.model == 'NDN':
             label = read_img(os.path.join(self.root_path, 'images_ndn', self.img_path[i]), self.arr_type)
