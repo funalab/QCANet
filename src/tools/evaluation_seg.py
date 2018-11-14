@@ -132,12 +132,12 @@ if __name__ == '__main__':
     with open(opbase + psep + 'result.txt', 'a') as f:
         for t in t_list:
             if args.labeling4:
-                #seg = io.imread(args.indir + psep + 'segimg_{0:03d}.tif'.format(t))
-                seg = io.imread(args.indir + psep + 'segimg_t{}.tif'.format(t))
+                seg = io.imread(args.indir + psep + 'segimg_{0:03d}.tif'.format(t))
+                #seg = io.imread(args.indir + psep + 'segimg_t{}.tif'.format(t))
                 seg = morphology.label(seg, neighbors=4)
             elif args.labeling8:
-                #seg = io.imread(args.indir + psep + 'segimg_{0:03d}.tif'.format(t))
-                seg = io.imread(args.indir + psep + 'segimg_t{}.tif'.format(t))
+                seg = io.imread(args.indir + psep + 'segimg_{0:03d}.tif'.format(t))
+                #seg = io.imread(args.indir + psep + 'segimg_t{}.tif'.format(t))
                 seg = morphology.label(seg, neighbors=8)
             else:
                 #seg = io.imread(args.indir + psep + 'ws_{0:03d}.tif'.format(t))

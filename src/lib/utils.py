@@ -25,7 +25,8 @@ def get_dataset(args):
         augmentation=args.augmentation,
         scaling=args.scaling,
         resolution=eval(args.resolution),
-        crop_size=eval(args.patch_size)
+        crop_size=eval(args.patch_size),
+        ndim=args.ndim
     )
     validation_dataset = PreprocessedDataset(
         root_path=args.root_path,
@@ -37,7 +38,8 @@ def get_dataset(args):
         augmentation=False,
         scaling=args.scaling,
         resolution=eval(args.resolution),
-        crop_size=eval(args.patch_size)
+        crop_size=eval(args.patch_size),
+        ndim=args.ndim
     )
     return train_dataset, validation_dataset
 

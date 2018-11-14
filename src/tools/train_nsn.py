@@ -115,7 +115,8 @@ def main():
             gpu=args.gpu,
             opbase=opbase,
             mean_image=mean_image,
-            opt_method=args.optimizer
+            opt_method=args.optimizer,
+            ndim=args.ndim
         )
     elif args.model == 'NDN':
         trainer = NDNTrainer(
@@ -128,7 +129,8 @@ def main():
             mean_image=mean_image,
             opt_method=args.optimizer,
             delv=3,
-            r_thr=10
+            r_thr=10,
+            ndim=args.ndim
         )
     train_eval, test_eval, best_score = trainer.training((train_iterator, validation_iterator))
 

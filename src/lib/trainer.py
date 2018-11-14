@@ -26,7 +26,8 @@ class NSNTrainer():
             gpu,
             opbase,
             mean_image=None,
-            opt_method='Adam'
+            opt_method='Adam',
+            ndim=3
     ):
         self.model = model
         self.epoch = epoch
@@ -37,6 +38,7 @@ class NSNTrainer():
         self.mean_image = mean_image
         self.opt_method = opt_method
         self.criteria = ['Accuracy', 'Recall', 'Precision', 'Specificity', 'F-measure', 'IoU']
+        self.ndim = ndim
 
     def training(self, iterators):
         train_iter, val_iter = iterators
@@ -215,13 +217,21 @@ class NSNTrainer():
             else:
                 x_batch, y_batch = dataset_iter.next()[0][0] - self.mean_image, dataset_iter.next()[0][1]
 
-            im_size = x_batch.shape[2:]
-            stride = [self.patchsize[0]/2, self.patchsize[1]/2, self.patchsize[2]/2]
-            sh = [stride[0]/2, stride[1]/2, stride[2]/2]
+            if self.ndim == 2:
+                im_size = x_batch.shape[2:]
+                stride = [self.patchsize[0]/2, self.patchsize[1]/2]
+                sh = [stride[0]/2, stride[1]/2]
+            elif self.ndim == 3:
+                im_size = x_batch.shape[2:]
+                stride = [self.patchsize[0]/2, self.patchsize[1]/2, self.patchsize[2]/2]
+                sh = [stride[0]/2, stride[1]/2, stride[2]/2]
 
             ''' calculation for pad size'''
             if np.min(self.patchsize) > np.max(im_size):
-                pad_size = [self.patchsize[0], self.patchsize[1], self.patchsize[2]]
+                if self.ndim == 2:
+                    pad_size = [self.patchsize[0], self.patchsize[1]]
+                elif self.ndim == 3:
+                    pad_size = [self.patchsize[0], self.patchsize[1], self.patchsize[2]]
             else:
                 pad_size = []
                 for axis in range(len(im_size)):
@@ -236,11 +246,11 @@ class NSNTrainer():
             y_batch = mirror_extension_image(image=y_batch, length=int(np.max(self.patchsize)))[:, self.patchsize[0]-sh[0]:self.patchsize[0]-sh[0]+pad_size[0], self.patchsize[1]-sh[1]:self.patchsize[1]-sh[1]+pad_size[1], self.patchsize[2]-sh[2]:self.patchsize[2]-sh[2]+pad_size[2]]
             pre_img = np.zeros(pad_size)
 
-            for z in range(0, pad_size[0]-stride[0], stride[0]):
-                for y in range(0, pad_size[1]-stride[1], stride[1]):
-                    for x in range(0, pad_size[2]-stride[2], stride[2]):
-                        x_patch = x_batch[:, :, z:z+self.patchsize[0], y:y+self.patchsize[1], x:x+self.patchsize[2]]
-                        y_patch = y_batch[:, z:z+self.patchsize[0], y:y+self.patchsize[1], x:x+self.patchsize[2]]
+            if self.ndim == 2:
+                for y in range(0, pad_size[0]-stride[0], stride[0]):
+                    for x in range(0, pad_size[1]-stride[1], stride[1]):
+                        x_patch = x_batch[:, :, y:y+self.patchsize[0], x:x+self.patchsize[1]]
+                        y_patch = y_batch[:, y:y+self.patchsize[0], x:x+self.patchsize[1]]
                         if self.gpu >= 0:
                             x_patch = cuda.to_gpu(x_patch)
                             y_patch = cuda.to_gpu(y_patch)
@@ -250,9 +260,27 @@ class NSNTrainer():
                             s_output = cuda.to_cpu(s_output)
                         pred = copy.deepcopy((0 < (s_output[0][1] - s_output[0][0])) * 255)
                         # Add segmentation image
-                        pre_img[z:z+stride[0], y:y+stride[1], x:x+stride[2]] += pred[sh[0]:-sh[0], sh[1]:-sh[1], sh[2]:-sh[2]]
-            seg_img = (pre_img > 0) * 1
-            seg_img = seg_img[:im_size[0], :im_size[1], :im_size[2]]
+                        pre_img[y:y+stride[0], x:x+stride[1]] += pred[sh[0]:-sh[0], sh[1]:-sh[1]]
+                seg_img = (pre_img > 0) * 1
+                seg_img = seg_img[:im_size[0], :im_size[1]]
+            elif self.ndim == 3:
+                for z in range(0, pad_size[0]-stride[0], stride[0]):
+                    for y in range(0, pad_size[1]-stride[1], stride[1]):
+                        for x in range(0, pad_size[2]-stride[2], stride[2]):
+                            x_patch = x_batch[:, :, z:z+self.patchsize[0], y:y+self.patchsize[1], x:x+self.patchsize[2]]
+                            y_patch = y_batch[:, z:z+self.patchsize[0], y:y+self.patchsize[1], x:x+self.patchsize[2]]
+                            if self.gpu >= 0:
+                                x_patch = cuda.to_gpu(x_patch)
+                                y_patch = cuda.to_gpu(y_patch)
+                            s_loss, s_output = self.model(x=x_patch, t=y_patch, seg=False)
+                            sum_loss += float(cuda.to_cpu(s_loss.data) * self.batchsize)
+                            if self.gpu >= 0:
+                                s_output = cuda.to_cpu(s_output)
+                            pred = copy.deepcopy((0 < (s_output[0][1] - s_output[0][0])) * 255)
+                            # Add segmentation image
+                            pre_img[z:z+stride[0], y:y+stride[1], x:x+stride[2]] += pred[sh[0]:-sh[0], sh[1]:-sh[1], sh[2]:-sh[2]]
+                seg_img = (pre_img > 0) * 1
+                seg_img = seg_img[:im_size[0], :im_size[1], :im_size[2]]
             gt = gt[0]
             io.imsave('{}/segimg{}_validation.tif'.format(self.opbase, num), np.array(seg_img * 255).astype(np.uint8))
             io.imsave('{}/gtimg{}_validation.tif'.format(self.opbase, num), np.array(gt * 255).astype(np.uint8))
@@ -311,7 +339,8 @@ class NDNTrainer():
             mean_image=None,
             opt_method='Adam',
             delv=3,
-            r_thr=10
+            r_thr=10,
+            ndim=3
     ):
         self.model = model
         self.epoch = epoch
@@ -324,6 +353,7 @@ class NDNTrainer():
         self.criteria = ['Recall', 'Precision', 'F-measure', 'IoU']
         self.delv = delv
         self.r_thr = r_thr
+        self.ndim = ndim
 
 
     def training(self, iterators):
@@ -471,27 +501,40 @@ class NDNTrainer():
                 labels = np.unique(markers_pr)
                 markers_pr = np.searchsorted(labels, markers_pr)
                 numPR += np.max(markers_pr)
-                center_pr = np.zeros((np.max(markers_pr), 3))
+                center_pr = np.zeros((np.max(markers_pr), self.ndim))
                 count_pr = np.zeros(np.max(markers_pr)).reshape(np.max(markers_pr), 1)
                 # make Centroid GT
                 markers_gt = morphology.label(y_patch, neighbors=4)
                 numGT += np.max(markers_gt)
-                center_gt = np.zeros((np.max(markers_gt), 3))
+                center_gt = np.zeros((np.max(markers_gt), self.ndim))
                 count_gt = np.zeros(np.max(markers_gt)).reshape(np.max(markers_gt), 1)
-                z, y, x = np.shape(y_patch)
-                for i in range(z):
-                    for j in range(y):
-                        for k in range(x):
-                            if markers_pr[i][j][k] > 0:
-                                center_pr[markers_pr[i][j][k]-1][0] += k
-                                center_pr[markers_pr[i][j][k]-1][1] += j
-                                center_pr[markers_pr[i][j][k]-1][2] += i
-                                count_pr[markers_pr[i][j][k]-1] += 1
-                            if markers_gt[i][j][k] > 0:
-                                center_gt[markers_gt[i][j][k]-1][0] += k
-                                center_gt[markers_gt[i][j][k]-1][1] += j
-                                center_gt[markers_gt[i][j][k]-1][2] += i
-                                count_gt[markers_gt[i][j][k]-1] += 1
+                if self.ndim == 2:
+                    y, x = np.shape(y_patch)
+                    for i in range(y):
+                        for j in range(x):
+                            if markers_pr[i][j] > 0:
+                                center_pr[markers_pr[i][j]-1][0] += j
+                                center_pr[markers_pr[i][j]-1][1] += i
+                                count_pr[markers_pr[i][j]-1] += 1
+                            if markers_gt[i][j] > 0:
+                                center_gt[markers_gt[i][j]-1][0] += j
+                                center_gt[markers_gt[i][j]-1][1] += i
+                                count_gt[markers_gt[i][j]-1] += 1
+                elif self.ndim == 3:
+                    z, y, x = np.shape(y_patch)
+                    for i in range(z):
+                        for j in range(y):
+                            for k in range(x):
+                                if markers_pr[i][j][k] > 0:
+                                    center_pr[markers_pr[i][j][k]-1][0] += k
+                                    center_pr[markers_pr[i][j][k]-1][1] += j
+                                    center_pr[markers_pr[i][j][k]-1][2] += i
+                                    count_pr[markers_pr[i][j][k]-1] += 1
+                                if markers_gt[i][j][k] > 0:
+                                    center_gt[markers_gt[i][j][k]-1][0] += k
+                                    center_gt[markers_gt[i][j][k]-1][1] += j
+                                    center_gt[markers_gt[i][j][k]-1][2] += i
+                                    count_gt[markers_gt[i][j][k]-1] += 1
                 center_pr /= count_pr
                 center_gt /= count_gt
                 pare = []
@@ -523,13 +566,21 @@ class NDNTrainer():
             else:
                 x_batch, y_batch = dataset_iter.next()[0][0] - self.mean_image, dataset_iter.next()[0][1]
 
-            im_size = x_batch.shape[2:]
-            stride = [self.patchsize[0]/2, self.patchsize[1]/2, self.patchsize[2]/2]
-            sh = [stride[0]/2, stride[1]/2, stride[2]/2]
+            if self.ndim == 2:
+                im_size = x_batch.shape[2:]
+                stride = [self.patchsize[0]/2, self.patchsize[1]/2]
+                sh = [stride[0]/2, stride[1]/2]
+            elif self.ndim == 3:
+                im_size = x_batch.shape[2:]
+                stride = [self.patchsize[0]/2, self.patchsize[1]/2, self.patchsize[2]/2]
+                sh = [stride[0]/2, stride[1]/2, stride[2]/2]
 
             ''' calculation for pad size'''
             if np.min(self.patchsize) > np.max(im_size):
-                pad_size = [self.patchsize[0], self.patchsize[1], self.patchsize[2]]
+                if self.ndim == 2:
+                    pad_size = [self.patchsize[0], self.patchsize[1]]
+                elif self.ndim == 3:
+                    pad_size = [self.patchsize[0], self.patchsize[1], self.patchsize[2]]
             else:
                 pad_size = []
                 for axis in range(len(im_size)):
@@ -540,15 +591,15 @@ class NDNTrainer():
                     pad_size.append(stride[axis] * stride_num + self.patchsize[axis])
 
             gt = copy.deepcopy(y_batch)
-            x_batch = mirror_extension_image(image=x_batch, length=int(np.max(self.patchsize)))[:, :, self.patchsize[0]-sh[0]:self.patchsize[0]-sh[0]+pad_size[0], self.patchsize[1]-sh[1]:self.patchsize[1]-sh[1]+pad_size[1], self.patchsize[2]-sh[2]:self.patchsize[2]-sh[2]+pad_size[2]]
-            y_batch = mirror_extension_image(image=y_batch, length=int(np.max(self.patchsize)))[:, self.patchsize[0]-sh[0]:self.patchsize[0]-sh[0]+pad_size[0], self.patchsize[1]-sh[1]:self.patchsize[1]-sh[1]+pad_size[1], self.patchsize[2]-sh[2]:self.patchsize[2]-sh[2]+pad_size[2]]
-            pre_img = np.zeros(pad_size)
 
-            for z in range(0, pad_size[0]-stride[0], stride[0]):
-                for y in range(0, pad_size[1]-stride[1], stride[1]):
-                    for x in range(0, pad_size[2]-stride[2], stride[2]):
-                        x_patch = x_batch[:, :, z:z+self.patchsize[0], y:y+self.patchsize[1], x:x+self.patchsize[2]]
-                        y_patch = y_batch[:, z:z+self.patchsize[0], y:y+self.patchsize[1], x:x+self.patchsize[2]]
+            if self.ndim == 2:
+                x_batch = mirror_extension_image(image=x_batch, length=int(np.max(self.patchsize)))[:, :, self.patchsize[0]-sh[0]:self.patchsize[0]-sh[0]+pad_size[0], self.patchsize[1]-sh[1]:self.patchsize[1]-sh[1]+pad_size[1]]
+                y_batch = mirror_extension_image(image=y_batch, length=int(np.max(self.patchsize)))[:, self.patchsize[0]-sh[0]:self.patchsize[0]-sh[0]+pad_size[0], self.patchsize[1]-sh[1]:self.patchsize[1]-sh[1]+pad_size[1]]
+                pre_img = np.zeros(pad_size)
+                for y in range(0, pad_size[0]-stride[0], stride[0]):
+                    for x in range(0, pad_size[1]-stride[1], stride[1]):
+                        x_patch = x_batch[:, :, y:y+self.patchsize[0], x:x+self.patchsize[1]]
+                        y_patch = y_batch[:, y:y+self.patchsize[0], x:x+self.patchsize[1]]
                         if self.gpu >= 0:
                             x_patch = cuda.to_gpu(x_patch)
                             y_patch = cuda.to_gpu(y_patch)
@@ -558,9 +609,30 @@ class NDNTrainer():
                             s_output = cuda.to_cpu(s_output)
                         pred = copy.deepcopy((0 < (s_output[0][1] - s_output[0][0])) * 255)
                         # Add segmentation image
-                        pre_img[z:z+self.patchsize[0]-stride[0], y:y+self.patchsize[1]-stride[1], x:x+self.patchsize[2]-stride[2]] += pred[sh[0]:-sh[0], sh[1]:-sh[1], sh[2]:-sh[2]]
-            seg_img = (pre_img > 0) * 1
-            seg_img = seg_img[0:im_size[0], 0:im_size[1], 0:im_size[2]]
+                        pre_img[y:y+self.patchsize[0]-stride[0], x:x+self.patchsize[1]-stride[1]] += pred[sh[0]:-sh[0], sh[1]:-sh[1]]
+                seg_img = (pre_img > 0) * 1
+                seg_img = seg_img[0:im_size[0], 0:im_size[1]]
+            elif self.ndim == 3:
+                x_batch = mirror_extension_image(image=x_batch, length=int(np.max(self.patchsize)))[:, :, self.patchsize[0]-sh[0]:self.patchsize[0]-sh[0]+pad_size[0], self.patchsize[1]-sh[1]:self.patchsize[1]-sh[1]+pad_size[1], self.patchsize[2]-sh[2]:self.patchsize[2]-sh[2]+pad_size[2]]
+                y_batch = mirror_extension_image(image=y_batch, length=int(np.max(self.patchsize)))[:, self.patchsize[0]-sh[0]:self.patchsize[0]-sh[0]+pad_size[0], self.patchsize[1]-sh[1]:self.patchsize[1]-sh[1]+pad_size[1], self.patchsize[2]-sh[2]:self.patchsize[2]-sh[2]+pad_size[2]]
+                pre_img = np.zeros(pad_size)
+                for z in range(0, pad_size[0]-stride[0], stride[0]):
+                    for y in range(0, pad_size[1]-stride[1], stride[1]):
+                        for x in range(0, pad_size[2]-stride[2], stride[2]):
+                            x_patch = x_batch[:, :, z:z+self.patchsize[0], y:y+self.patchsize[1], x:x+self.patchsize[2]]
+                            y_patch = y_batch[:, z:z+self.patchsize[0], y:y+self.patchsize[1], x:x+self.patchsize[2]]
+                            if self.gpu >= 0:
+                                x_patch = cuda.to_gpu(x_patch)
+                                y_patch = cuda.to_gpu(y_patch)
+                            s_loss, s_output = self.model(x=x_patch, t=y_patch, seg=False)
+                            sum_loss += float(cuda.to_cpu(s_loss.data) * self.batchsize)
+                            if self.gpu >= 0:
+                                s_output = cuda.to_cpu(s_output)
+                            pred = copy.deepcopy((0 < (s_output[0][1] - s_output[0][0])) * 255)
+                            # Add segmentation image
+                            pre_img[z:z+self.patchsize[0]-stride[0], y:y+self.patchsize[1]-stride[1], x:x+self.patchsize[2]-stride[2]] += pred[sh[0]:-sh[0], sh[1]:-sh[1], sh[2]:-sh[2]]
+                seg_img = (pre_img > 0) * 1
+                seg_img = seg_img[0:im_size[0], 0:im_size[1], 0:im_size[2]]
             gt = gt[0]
             io.imsave('{}/segimg{}_validation.tif'.format(self.opbase, num), np.array(seg_img * 255).astype(np.uint8))
             io.imsave('{}/gtimg{}_validation.tif'.format(self.opbase, num), np.array(gt * 255).astype(np.uint8))
@@ -574,27 +646,40 @@ class NDNTrainer():
                 labels = np.unique(markers_pr)
                 markers_pr = np.searchsorted(labels, markers_pr)
                 numPR += np.max(markers_pr)
-                center_pr = np.zeros((np.max(markers_pr), 3))
+                center_pr = np.zeros((np.max(markers_pr), self.ndim))
                 count_pr = np.zeros(np.max(markers_pr)).reshape(np.max(markers_pr), 1)
                 # make Centroid GT
                 markers_gt = morphology.label(gt, neighbors=4)
                 numGT += np.max(markers_gt)
-                center_gt = np.zeros((np.max(markers_gt), 3))
+                center_gt = np.zeros((np.max(markers_gt), self.ndim))
                 count_gt = np.zeros(np.max(markers_gt)).reshape(np.max(markers_gt), 1)
-                z, y, x = np.shape(gt)
-                for i in range(z):
-                    for j in range(y):
-                        for k in range(x):
-                            if markers_pr[i][j][k] > 0:
-                                center_pr[markers_pr[i][j][k]-1][0] += k
-                                center_pr[markers_pr[i][j][k]-1][1] += j
-                                center_pr[markers_pr[i][j][k]-1][2] += i
-                                count_pr[markers_pr[i][j][k]-1] += 1
-                            if markers_gt[i][j][k] > 0:
-                                center_gt[markers_gt[i][j][k]-1][0] += k
-                                center_gt[markers_gt[i][j][k]-1][1] += j
-                                center_gt[markers_gt[i][j][k]-1][2] += i
-                                count_gt[markers_gt[i][j][k]-1] += 1
+                if self.ndim == 2:
+                    y, x = np.shape(gt)
+                    for i in range(y):
+                        for j in range(x):
+                            if markers_pr[i][j] > 0:
+                                center_pr[markers_pr[i][j]-1][0] += j
+                                center_pr[markers_pr[i][j]-1][1] += i
+                                count_pr[markers_pr[i][j]-1] += 1
+                            if markers_gt[i][j] > 0:
+                                center_gt[markers_gt[i][j]-1][0] += j
+                                center_gt[markers_gt[i][j]-1][1] += i
+                                count_gt[markers_gt[i][j]-1] += 1
+                elif self.ndim == 3:
+                    z, y, x = np.shape(gt)
+                    for i in range(z):
+                        for j in range(y):
+                            for k in range(x):
+                                if markers_pr[i][j][k] > 0:
+                                    center_pr[markers_pr[i][j][k]-1][0] += k
+                                    center_pr[markers_pr[i][j][k]-1][1] += j
+                                    center_pr[markers_pr[i][j][k]-1][2] += i
+                                    count_pr[markers_pr[i][j][k]-1] += 1
+                                if markers_gt[i][j][k] > 0:
+                                    center_gt[markers_gt[i][j][k]-1][0] += k
+                                    center_gt[markers_gt[i][j][k]-1][1] += j
+                                    center_gt[markers_gt[i][j][k]-1][2] += i
+                                    count_gt[markers_gt[i][j][k]-1] += 1
                 center_pr /= count_pr
                 center_gt /= count_gt
                 pare = []
