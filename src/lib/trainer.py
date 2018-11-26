@@ -44,10 +44,12 @@ class NSNTrainer():
         train_iter, val_iter = iterators
 
         if self.opt_method == 'Adam':
-            opt_nsn = optimizers.Adam(alpha=0.05767827010227712, beta1=0.9687170166672859,
-                                      beta2=0.9918705323205452, eps=0.03260658847351856)
+            #opt_nsn = optimizers.Adam(alpha=0.05767827010227712, beta1=0.9687170166672859,
+            #                          beta2=0.9918705323205452, eps=0.03260658847351856)
+            opt_nsn = optimizers.Adam()
             opt_nsn.setup(self.model)
-            opt_nsn.add_hook(chainer.optimizer.WeightDecay(0.00000416029939))
+            #opt_nsn.add_hook(chainer.optimizer.WeightDecay(0.00000416029939))
+            opt_nsn.add_hook(chainer.optimizer.WeightDecay(0.000001))
 
         elif self.opt_method == 'SGD':
             opt_nsn = optimizers.SGD(lr=1.0)
@@ -242,11 +244,11 @@ class NSNTrainer():
                     pad_size.append(stride[axis] * stride_num + self.patchsize[axis])
 
             gt = copy.deepcopy(y_batch)
-            x_batch = mirror_extension_image(image=x_batch, length=int(np.max(self.patchsize)))[:, :, self.patchsize[0]-sh[0]:self.patchsize[0]-sh[0]+pad_size[0], self.patchsize[1]-sh[1]:self.patchsize[1]-sh[1]+pad_size[1], self.patchsize[2]-sh[2]:self.patchsize[2]-sh[2]+pad_size[2]]
-            y_batch = mirror_extension_image(image=y_batch, length=int(np.max(self.patchsize)))[:, self.patchsize[0]-sh[0]:self.patchsize[0]-sh[0]+pad_size[0], self.patchsize[1]-sh[1]:self.patchsize[1]-sh[1]+pad_size[1], self.patchsize[2]-sh[2]:self.patchsize[2]-sh[2]+pad_size[2]]
             pre_img = np.zeros(pad_size)
 
             if self.ndim == 2:
+                x_batch = mirror_extension_image(image=x_batch, ndim=self.ndim, length=int(np.max(self.patchsize)))[:, :, self.patchsize[0]-sh[0]:self.patchsize[0]-sh[0]+pad_size[0], self.patchsize[1]-sh[1]:self.patchsize[1]-sh[1]+pad_size[1]]
+                y_batch = mirror_extension_image(image=y_batch, ndim=self.ndim,  length=int(np.max(self.patchsize)))[:, self.patchsize[0]-sh[0]:self.patchsize[0]-sh[0]+pad_size[0], self.patchsize[1]-sh[1]:self.patchsize[1]-sh[1]+pad_size[1]]
                 for y in range(0, pad_size[0]-stride[0], stride[0]):
                     for x in range(0, pad_size[1]-stride[1], stride[1]):
                         x_patch = x_batch[:, :, y:y+self.patchsize[0], x:x+self.patchsize[1]]
@@ -264,6 +266,8 @@ class NSNTrainer():
                 seg_img = (pre_img > 0) * 1
                 seg_img = seg_img[:im_size[0], :im_size[1]]
             elif self.ndim == 3:
+                x_batch = mirror_extension_image(image=x_batch, ndim=self.ndim, length=int(np.max(self.patchsize)))[:, :, self.patchsize[0]-sh[0]:self.patchsize[0]-sh[0]+pad_size[0], self.patchsize[1]-sh[1]:self.patchsize[1]-sh[1]+pad_size[1], self.patchsize[2]-sh[2]:self.patchsize[2]-sh[2]+pad_size[2]]
+                y_batch = mirror_extension_image(image=y_batch, ndim=self.ndim, length=int(np.max(self.patchsize)))[:, self.patchsize[0]-sh[0]:self.patchsize[0]-sh[0]+pad_size[0], self.patchsize[1]-sh[1]:self.patchsize[1]-sh[1]+pad_size[1], self.patchsize[2]-sh[2]:self.patchsize[2]-sh[2]+pad_size[2]]
                 for z in range(0, pad_size[0]-stride[0], stride[0]):
                     for y in range(0, pad_size[1]-stride[1], stride[1]):
                         for x in range(0, pad_size[2]-stride[2], stride[2]):
@@ -360,10 +364,12 @@ class NDNTrainer():
         train_iter, val_iter = iterators
 
         if self.opt_method == 'Adam':
-            opt_ndn = optimizers.Adam(alpha=0.07984883572883512, beta1=0.9113157387413141,
-                                      beta2=0.9931108449092836, eps=0.07309957525741932)
+            #opt_ndn = optimizers.Adam(alpha=0.07984883572883512, beta1=0.9113157387413141,
+            #                          beta2=0.9931108449092836, eps=0.07309957525741932)
+            opt_ndn = optimizers.Adam()
             opt_ndn.setup(self.model)
-            opt_ndn.add_hook(chainer.optimizer.WeightDecay(0.00000570679784139))
+            #opt_ndn.add_hook(chainer.optimizer.WeightDecay(0.00000570679784139))
+            opt_ndn.add_hook(chainer.optimizer.WeightDecay(0.000001))
 
         elif self.opt_method == 'SGD':
             opt_ndn = optimizers.SGD(lr=0.66243829123061737)
@@ -386,8 +392,16 @@ class NDNTrainer():
             print('[epoch {}]'.format(epoch))
             traeval, train_sum_loss = self._trainer(train_iter, opt_ndn, epoch=epoch)
             train_eval['loss'].append(train_sum_loss / (N_train * self.batchsize))
-            teseval, test_sum_loss = self._validater(val_iter, epoch=epoch)
-            test_eval['loss'].append(test_sum_loss / (N_test * self.batchsize))
+            if epoch > 20:
+                teseval, test_sum_loss = self._validater(val_iter, epoch=epoch)
+                test_eval['loss'].append(test_sum_loss / (N_test * self.batchsize))
+            else:
+                teseval = {}
+                for cri in self.criteria:
+                    teseval[cri] = 0
+                    test_eval['loss'].append(0)
+                    test_sum_loss = 0
+                
 
             for cri in self.criteria:
                 train_eval[cri].append(traeval[cri])
@@ -593,8 +607,8 @@ class NDNTrainer():
             gt = copy.deepcopy(y_batch)
 
             if self.ndim == 2:
-                x_batch = mirror_extension_image(image=x_batch, length=int(np.max(self.patchsize)))[:, :, self.patchsize[0]-sh[0]:self.patchsize[0]-sh[0]+pad_size[0], self.patchsize[1]-sh[1]:self.patchsize[1]-sh[1]+pad_size[1]]
-                y_batch = mirror_extension_image(image=y_batch, length=int(np.max(self.patchsize)))[:, self.patchsize[0]-sh[0]:self.patchsize[0]-sh[0]+pad_size[0], self.patchsize[1]-sh[1]:self.patchsize[1]-sh[1]+pad_size[1]]
+                x_batch = mirror_extension_image(image=x_batch, ndim=self.ndim, length=int(np.max(self.patchsize)))[:, :, self.patchsize[0]-sh[0]:self.patchsize[0]-sh[0]+pad_size[0], self.patchsize[1]-sh[1]:self.patchsize[1]-sh[1]+pad_size[1]]
+                y_batch = mirror_extension_image(image=y_batch, ndim=self.ndim, length=int(np.max(self.patchsize)))[:, self.patchsize[0]-sh[0]:self.patchsize[0]-sh[0]+pad_size[0], self.patchsize[1]-sh[1]:self.patchsize[1]-sh[1]+pad_size[1]]
                 pre_img = np.zeros(pad_size)
                 for y in range(0, pad_size[0]-stride[0], stride[0]):
                     for x in range(0, pad_size[1]-stride[1], stride[1]):
@@ -613,8 +627,8 @@ class NDNTrainer():
                 seg_img = (pre_img > 0) * 1
                 seg_img = seg_img[0:im_size[0], 0:im_size[1]]
             elif self.ndim == 3:
-                x_batch = mirror_extension_image(image=x_batch, length=int(np.max(self.patchsize)))[:, :, self.patchsize[0]-sh[0]:self.patchsize[0]-sh[0]+pad_size[0], self.patchsize[1]-sh[1]:self.patchsize[1]-sh[1]+pad_size[1], self.patchsize[2]-sh[2]:self.patchsize[2]-sh[2]+pad_size[2]]
-                y_batch = mirror_extension_image(image=y_batch, length=int(np.max(self.patchsize)))[:, self.patchsize[0]-sh[0]:self.patchsize[0]-sh[0]+pad_size[0], self.patchsize[1]-sh[1]:self.patchsize[1]-sh[1]+pad_size[1], self.patchsize[2]-sh[2]:self.patchsize[2]-sh[2]+pad_size[2]]
+                x_batch = mirror_extension_image(image=x_batch, ndim=self.ndim, length=int(np.max(self.patchsize)))[:, :, self.patchsize[0]-sh[0]:self.patchsize[0]-sh[0]+pad_size[0], self.patchsize[1]-sh[1]:self.patchsize[1]-sh[1]+pad_size[1], self.patchsize[2]-sh[2]:self.patchsize[2]-sh[2]+pad_size[2]]
+                y_batch = mirror_extension_image(image=y_batch, ndim=self.ndim, length=int(np.max(self.patchsize)))[:, self.patchsize[0]-sh[0]:self.patchsize[0]-sh[0]+pad_size[0], self.patchsize[1]-sh[1]:self.patchsize[1]-sh[1]+pad_size[1], self.patchsize[2]-sh[2]:self.patchsize[2]-sh[2]+pad_size[2]]
                 pre_img = np.zeros(pad_size)
                 for z in range(0, pad_size[0]-stride[0], stride[0]):
                     for y in range(0, pad_size[1]-stride[1], stride[1]):

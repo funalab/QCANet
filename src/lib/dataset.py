@@ -35,7 +35,8 @@ def crop_pair_2d(
         crop_size=(512, 512),
         nonzero_image1_thr=0.0,
         nonzero_image2_thr=0.0,
-        nb_crop=1
+        nb_crop=1,
+        augmentation=True
 ):
     """ 2d {image, label} patches are cropped from array.
     Args:
@@ -67,8 +68,8 @@ def crop_pair_2d(
         right = left + crop_size[0]
 
         # crop {image_A, image_B}
-        cropped_image1 = image1[:, left:right, top:bottom]
-        cropped_image2 = image2[:, left:right, top:bottom]
+        cropped_image1 = image1[left:right, top:bottom]
+        cropped_image2 = image2[left:right, top:bottom]
         # get nonzero ratio
         nonzero_image1_ratio = np.nonzero(cropped_image1)[0].size / cropped_image1.size
         nonzero_image2_ratio = np.nonzero(cropped_image2)[0].size / cropped_image2.size
@@ -191,6 +192,7 @@ class PreprocessedDataset(chainer.dataset.DatasetMixin):
         self.resolution = resolution
         self.crop_size = crop_size
         self.train = train
+        self.ndim = ndim
 
         with open(split_list, 'r') as f:
             self.img_path = f.read().split()
@@ -210,7 +212,7 @@ class PreprocessedDataset(chainer.dataset.DatasetMixin):
         return image.astype(np.float32)
 
     def _get_label_2d(self, i):
-        if self.model == 'NSN' or '3DUNet':
+        if self.model == 'NSN' or self.model == '3DUNet':
             label = read_img(os.path.join(self.root_path, 'images_nsn', self.img_path[i]), self.arr_type)
         elif self.model == 'NDN':
             label = read_img(os.path.join(self.root_path, 'images_ndn', self.img_path[i]), self.arr_type)
@@ -236,7 +238,7 @@ class PreprocessedDataset(chainer.dataset.DatasetMixin):
         return image.astype(np.float32)
 
     def _get_label_3d(self, i):
-        if self.model == 'NSN' or '3DUNet':
+        if self.model == 'NSN' or self.model == '3DUNet':
             label = read_img(os.path.join(self.root_path, 'images_nsn', self.img_path[i]), self.arr_type)
         elif self.model == 'NDN':
             label = read_img(os.path.join(self.root_path, 'images_ndn', self.img_path[i]), self.arr_type)

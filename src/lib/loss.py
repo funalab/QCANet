@@ -75,13 +75,21 @@ class DiceLoss(function.Function):
 
 def _encode_one_hot_vector_core(x, nb_class):
     xp = cuda.get_array_module(x)
-    batch, h, w, d = x.shape
+    ndim = len(x.shape)
+    if ndim == 3:
+        batch, h, w = x.shape
+        res = xp.zeros((batch, nb_class, h, w), dtype=xp.float32)
+    elif ndim == 4:
+        batch, h, w, d = x.shape
+        res = xp.zeros((batch, nb_class, h, w, d), dtype=xp.float32)
 
-    res = xp.zeros((batch, nb_class, h, w, d), dtype=xp.float32)
     x = x.reshape(batch, -1)
     for i in range(batch):
         y = xp.identity(nb_class, dtype=xp.float32)[x[i]]
-        res[i] = xp.swapaxes(y, 0, 1).reshape((nb_class, h, w, d))
+        if ndim == 3:
+            res[i] = xp.swapaxes(y, 0, 1).reshape((nb_class, h, w))
+        elif ndim == 4:
+            res[i] = xp.swapaxes(y, 0, 1).reshape((nb_class, h, w, d))
     return res
 
 def encode_one_hot_vector(x, nb_class):

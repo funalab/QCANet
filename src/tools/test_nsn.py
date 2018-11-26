@@ -28,7 +28,8 @@ class TestNSN():
         resolution=(1.0, 1.0, 2.18),
         scaling=True,
         opbase=None,
-        gpu=False
+        gpu=False,
+        ndim=3
         ):
         self.model = model
         self.patchsize = (patchsize, patchsize, patchsize)
@@ -38,6 +39,7 @@ class TestNSN():
         self.opbase = opbase
         self.gpu = gpu
         self.psep = '/'
+        self.ndim = ndim
 
     def NuclearSegmentation(self, image_path):
         segbase = 'SegmentationImages'
@@ -46,7 +48,14 @@ class TestNSN():
 
         image = io.imread(image_path)
         im_size = image.shape
-        ip_size = (int(image.shape[0] * self.resolution[2]), int(image.shape[1] * self.resolution[1]), int(image.shape[2] * self.resolution[0]))
+        if self.ndim == 2:
+            ip_size = (int(image.shape[0] * self.resolution[1]), int(image.shape[1] * self.resolution[0]))
+            sh = [self.stride[0]/2, self.stride[1]/2]
+        elif self.ndim == 3:
+            print(image.shape)
+            print(self.resolution)
+            ip_size = (int(image.shape[0] * self.resolution[2]), int(image.shape[1] * self.resolution[1]), int(image.shape[2] * self.resolution[0]))
+            sh = [self.stride[0]/2, self.stride[1]/2, self.stride[2]/2]
         print('ip_size: {}'.format(ip_size))
         image = tr.resize(image, ip_size, order = 1, preserve_range = True)
         im_size_ip = image.shape
@@ -59,36 +68,14 @@ class TestNSN():
             #image = image / image.max()
             image = (image - image.min()) / (image.max() - image.min())
 
-        # Extension Image
-        # if self.patchsize > np.max(ip_size):
-        #     pad_size = self.patchsize
-        # else:
-        #     if (np.max(ip_size) - self.patchsize) % self.stride == 0:
-        #         stride_num = (np.max(ip_size) - self.patchsize) / self.stride
-        #     else:
-        #         stride_num = (np.max(ip_size) - self.patchsize) / self.stride + 1
-        #     pad_size = self.stride * stride_num + self.patchsize
-        # image = util.mirrorExtensionImage(image=image, length=int(self.patchsize))[0:pad_size, 0:pad_size, 0:pad_size]
-        # pre_img = np.zeros((image.shape))
-        #
-        # for z in range(0, pad_size-self.stride, self.stride):
-        #     for y in range(0, pad_size-self.stride, self.stride):
-        #         for x in range(0, pad_size-self.stride, self.stride):
-        #             x_patch = image[z:z+self.patchsize, y:y+self.patchsize, x:x+self.patchsize]
-        #             x_patch = x_patch.reshape(1, 1, self.patchsize, self.patchsize, self.patchsize).astype(np.float32)
-        #             if self.gpu >= 0:
-        #                 x_patch = cuda.to_gpu(x_patch)
-        #             s_output = self.model(x_patch, seg=True)
-        #             if self.gpu >= 0:
-        #                 s_output = cuda.to_cpu(s_output)
-        #             pred = copy.deepcopy((0 < (s_output[0][1] - s_output[0][0])) * 255)
-        #             # Add segmentation image
-        #             pre_img[z:z+self.patchsize, y:y+self.patchsize, x:x+self.patchsize] += pred
-        sh = [self.stride[0]/2, self.stride[1]/2, self.stride[2]/2]
+
 
         ''' calculation for pad size'''
         if np.min(self.patchsize) > np.max(np.array(im_size) + np.array(sh)*2):
-            pad_size = [self.patchsize[0], self.patchsize[1], self.patchsize[2]]
+            if self.ndim == 2:
+                pad_size = [self.patchsize[0], self.patchsize[1]]
+            elif self.ndim == 3:
+                pad_size = [self.patchsize[0], self.patchsize[1], self.patchsize[2]]
         else:
             pad_size = []
             for axis in range(len(im_size_ip)):
@@ -98,13 +85,13 @@ class TestNSN():
                     stride_num = int((im_size_ip[axis] + 2*sh[axis] - self.patchsize[axis]) / self.stride[axis]) + 1
                 pad_size.append(self.stride[axis] * stride_num + self.patchsize[axis])
 
-        image = mirror_extension_image(image=image, length=int(np.max(self.patchsize)))[self.patchsize[0]-sh[0]:self.patchsize[0]-sh[0]+pad_size[0], self.patchsize[1]-sh[1]:self.patchsize[1]-sh[1]+pad_size[1], self.patchsize[2]-sh[2]:self.patchsize[2]-sh[2]+pad_size[2]]
         pre_img = np.zeros(pad_size)
- 
-        for z in range(0, pad_size[0]-self.stride[0], self.stride[0]):
-            for y in range(0, pad_size[1]-self.stride[1], self.stride[1]):
-                for x in range(0, pad_size[2]-self.stride[2], self.stride[2]):
-                    x_patch = image[z:z+self.patchsize[0], y:y+self.patchsize[1], x:x+self.patchsize[2]]
+
+        if self.ndim == 2:
+            image = mirror_extension_image(image=image, ndim=self.ndim, length=int(np.max(self.patchsize)))[self.patchsize[0]-sh[0]:self.patchsize[0]-sh[0]+pad_size[0], self.patchsize[1]-sh[1]:self.patchsize[1]-sh[1]+pad_size[1]]
+            for y in range(0, pad_size[0]-self.stride[0], self.stride[0]):
+                for x in range(0, pad_size[1]-self.stride[1], self.stride[1]):
+                    x_patch = image[y:y+self.patchsize[0], x:x+self.patchsize[1]]
                     x_patch = np.expand_dims(np.expand_dims(x_patch.astype(np.float32), axis=0), axis=0)
                     if self.gpu >= 0:
                         x_patch = cuda.to_gpu(x_patch)
@@ -113,15 +100,32 @@ class TestNSN():
                         s_output = cuda.to_cpu(s_output)
                     pred = copy.deepcopy((0 < (s_output[0][1] - s_output[0][0])) * 255)
                     # Add segmentation image
-                    pre_img[z:z+self.stride[0], y:y+self.stride[1], x:x+self.stride[2]] += pred[sh[0]:-sh[0], sh[1]:-sh[1], sh[2]:-sh[2]]
+                    pre_img[y:y+self.stride[0], x:x+self.stride[1]] += pred[sh[0]:-sh[0], sh[1]:-sh[1]]
+            seg_img = (pre_img > 0) * 255
+            seg_img = seg_img[:im_size_ip[0], :im_size_ip[1]]
 
-        seg_img = (pre_img > 0) * 255
-        seg_img = seg_img[:im_size_ip[0], :im_size_ip[1], :im_size_ip[2]]
+        elif self.ndim == 3:
+            image = mirror_extension_image(image=image, ndim=self.ndim, length=int(np.max(self.patchsize)))[self.patchsize[0]-sh[0]:self.patchsize[0]-sh[0]+pad_size[0], self.patchsize[1]-sh[1]:self.patchsize[1]-sh[1]+pad_size[1], self.patchsize[2]-sh[2]:self.patchsize[2]-sh[2]+pad_size[2]]
+            for z in range(0, pad_size[0]-self.stride[0], self.stride[0]):
+                for y in range(0, pad_size[1]-self.stride[1], self.stride[1]):
+                    for x in range(0, pad_size[2]-self.stride[2], self.stride[2]):
+                        x_patch = image[z:z+self.patchsize[0], y:y+self.patchsize[1], x:x+self.patchsize[2]]
+                        x_patch = np.expand_dims(np.expand_dims(x_patch.astype(np.float32), axis=0), axis=0)
+                        if self.gpu >= 0:
+                            x_patch = cuda.to_gpu(x_patch)
+                        s_output = self.model(x=x_patch, t=None, seg=True)
+                        if self.gpu >= 0:
+                            s_output = cuda.to_cpu(s_output)
+                        pred = copy.deepcopy((0 < (s_output[0][1] - s_output[0][0])) * 255)
+                        # Add segmentation image
+                        pre_img[z:z+self.stride[0], y:y+self.stride[1], x:x+self.stride[2]] += pred[sh[0]:-sh[0], sh[1]:-sh[1], sh[2]:-sh[2]]
+            seg_img = (pre_img > 0) * 255
+            seg_img = seg_img[:im_size_ip[0], :im_size_ip[1], :im_size_ip[2]]
         seg_img = (tr.resize(seg_img, im_size, order = 1, preserve_range = True) > 0) * 255
         filename = self.opbase + self.psep + segbase + self.psep + 'segimg_{}.tif'.format(image_path[image_path.rfind('/')+1:image_path.rfind('.')])
         io.imsave(filename, seg_img.astype(np.uint8))
 
-        return seg_img
+        return seg_img.astype(np.uint16)
 
 
 if __name__ == '__main__':

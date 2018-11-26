@@ -10,6 +10,12 @@ GT
 datasets_previous
 
 
+#Run-Time
+confs/3dunet
+confs/celegans
+confs/compare
+
+
 #Python
 src/*.pyc
 src/lib/*.pyc

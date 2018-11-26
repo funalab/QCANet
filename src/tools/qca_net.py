@@ -100,7 +100,7 @@ def main():
 
     nsn = get_model(args)
     args.model = 'NDN'
-    args.ch_base = 12
+    args.ch_base = 16
     ndn = get_model(args)
     if args.model_nsn is not None:
         print('Load NSN from', args.model_nsn)
@@ -175,7 +175,8 @@ def main():
             resolution=(args.resolution_x, args.resolution_y, args.resolution_z),
             scaling=args.scaling_seg,
             opbase=opbase,
-            gpu=args.gpu
+            gpu=args.gpu,
+            ndim=args.ndim
             )
         test_ndn = TestNDN(
             model=ndn,
@@ -185,7 +186,8 @@ def main():
             scaling=args.scaling_det,
             delv=args.delete,
             opbase=opbase,
-            gpu=args.gpu
+            gpu=args.gpu,
+            ndim=args.ndim
             )
         for dl in dlist:
             image_path = args.indir + psep + dl
@@ -207,7 +209,7 @@ def main():
             labels = np.unique(wsimage)
             wsimage = np.searchsorted(labels, wsimage)
             filename = opbase + psep + wsbase + psep + 'ws_{}.tif'.format(image_path[image_path.rfind('/')+1:image_path.rfind('.')])
-            io.imsave(filename, wsimage.astype(np.uint8))
+            io.imsave(filename, wsimage.astype(np.uint16))
 
             f.write('Number of Nuclei: {}\n'.format(wsimage.max()))
             volumes = np.unique(wsimage, return_counts=True)[1][1:]
