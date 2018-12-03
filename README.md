@@ -40,7 +40,8 @@ The left hand side of the image(movie) is the early-stage mouse embryo, whose ce
 
         ```sh
         % git clone https://github.com/funalab/QCANet.git
-        % wget -P QCANet/models/p128 https://fun.bio.keio.ac.jp/software/QCANet/learned_ndn.model
+        % wget -P QCANet/models/p128 https://fun.bio.keio.ac.jp/software/QCANet/learned_nsn.npz
+        % wget -P QCANet/models/p128 https://fun.bio.keio.ac.jp/software/QCANet/learned_ndn.npz
         % cd QCANet/src
         % python qca_net.py --scaling_seg --scaling_det [--gpu gpu]
         ```
@@ -49,7 +50,8 @@ The left hand side of the image(movie) is the early-stage mouse embryo, whose ce
 
         ```sh
         % git clone https://github.com/funalab/QCANet.git
-        % curl -o QCANet/models/p128/learned_ndn.model https://fun.bio.keio.ac.jp/software/QCANet/learned_ndn.model
+        % curl -o QCANet/models/p128/learned_nsn.npz https://fun.bio.keio.ac.jp/software/QCANet/learned_nsn.npz
+        % curl -o QCANet/models/p128/learned_ndn.npz https://fun.bio.keio.ac.jp/software/QCANet/learned_ndn.npz
         % cd QCANet/src
         % python qca_net.py --scaling_seg --scaling_det [--gpu gpu]
         ```

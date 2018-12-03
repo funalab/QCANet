@@ -146,7 +146,7 @@ class Utils():
 
     def loadModel(self, model_path, model):
         try:
-            serializers.load_hdf5(model_path, model)
+            serializers.load_npz(model_path, model)
             print('Loading Model: {}'.format(model_path))
             with open(self.opbase + self.psep + 'result.txt', 'a') as f:
                 f.write('Loading Model: {}\n'.format(model_path))

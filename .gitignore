@@ -2,7 +2,8 @@
 .DS_Store
 
 #Model
-models/p128/learned_ndn.model
+models/p128/learned_nsn.npz
+models/p128/learned_ndn.npz
 
 #Output
 result_*

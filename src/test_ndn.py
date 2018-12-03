@@ -100,7 +100,7 @@ if __name__ == '__main__':
     ap = ArgumentParser(description='python test_ndn.py')
     ap.add_argument('--indir', '-i', nargs='?', default='../images/example_input', help='Specify input image')
     ap.add_argument('--outdir', '-o', nargs='?', default='result_test_ndn', help='Specify output files directory for create detection image')
-    ap.add_argument('--model', '-m', nargs='?', default='../models/p128/learned_ndn.model', help='Specify loading file path of learned NDN Model')
+    ap.add_argument('--model', '-m', nargs='?', default='../models/p128/learned_ndn.npz', help='Specify loading file path of learned NDN Model')
     ap.add_argument('--gpu', '-g', type=int, default=-1, help='Specify GPU ID (negative value indicates CPU)')
     ap.add_argument('--patchsize', '-p', type=int, default=128, help='Specify patch size')
     ap.add_argument('--stride', type=int, default=64, help='Specify stride size')
