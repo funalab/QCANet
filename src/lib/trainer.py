@@ -106,13 +106,13 @@ class NSNTrainer():
             if bestRecall <= teseval['Recall']:
                 bestRecall = teseval['Recall']
                 # Save Model
-                model_name = 'NSN_Recall_hdf5_p' + str(self.patchsize) + '_k' + str(kc+1) + '.model'
-                serializers.save_hdf5(self.opbase + '/' + model_name, self.model)
+                model_name = 'NSN_Recall_p' + str(self.patchsize) + '_k' + str(kc+1) + '.npz'
+                serializers.save_npz(self.opbase + '/' + model_name, self.model)
             if bestPrecision <= teseval['Precision']:
                 bestPrecision = teseval['Precision']
                 # Save Model
-                model_name = 'NSN_Precision_hdf5_p' + str(self.patchsize) + '_k' + str(kc+1) + '.model'
-                serializers.save_hdf5(self.opbase + '/' + model_name, self.model)
+                model_name = 'NSN_Precision_p' + str(self.patchsize) + '_k' + str(kc+1) + '.npz'
+                serializers.save_npz(self.opbase + '/' + model_name, self.model)
             if bestSpecificity <= teseval['Specificity']:
                 bestSpecificity = teseval['Specificity']
             if bestFmeasure <= teseval['F-measure']:
@@ -121,8 +121,8 @@ class NSNTrainer():
                 bestIoU = teseval['IoU']
                 bestEpoch = epoch
                 # Save Model
-                model_name = 'NSN_IoU_hdf5_p' + str(self.patchsize) + '_k' + str(kc+1) + '.model'
-                serializers.save_hdf5(self.opbase + '/' + model_name, self.model)
+                model_name = 'NSN_IoU_p' + str(self.patchsize) + '_k' + str(kc+1) + '.npz'
+                serializers.save_npz(self.opbase + '/' + model_name, self.model)
 
         bestScore = [bestAccuracy, bestRecall, bestPrecision, bestSpecificity, bestFmeasure, bestIoU]
         print('========================================')
@@ -305,19 +305,19 @@ class NDNTrainer():
             if bestRecall <= teseval['Recall']:
                 bestRecall = teseval['Recall']
                 # Save Model
-                model_name = 'NDN_Recall_hdf5_p' + str(self.patchsize) + '_k' + str(kc+1) + '.model'
-                serializers.save_hdf5(self.opbase + '/' + model_name, self.model)
+                model_name = 'NDN_Recall_p' + str(self.patchsize) + '_k' + str(kc+1) + '.npz'
+                serializers.save_npz(self.opbase + '/' + model_name, self.model)
             if bestPrecision <= teseval['Precision']:
                 bestPrecision = teseval['Precision']
                 # Save Model
-                smodelfile = 'NDN_Precision_hdf5_p' + str(self.patchsize) + '_k' + str(kc+1) + '.model'
-                serializers.save_hdf5(self.opbase + '/' + model_name, self.model)
+                smodelfile = 'NDN_Precision_p' + str(self.patchsize) + '_k' + str(kc+1) + '.npz'
+                serializers.save_npz(self.opbase + '/' + model_name, self.model)
             if bestFmeasure <= teseval['F-measure']:
                 bestFmeasure = teseval['F-measure']
                 bestEpoch = epoch
                 # Save Model
-                model_name = 'NDN_Fmeasure_hdf5_p' + str(self.patchsize) + '_k' + str(kc+1) + '.model'
-                serializers.save_hdf5(self.opbase + '/' + model_name, self.model)
+                model_name = 'NDN_Fmeasure_p' + str(self.patchsize) + '_k' + str(kc+1) + '.npz'
+                serializers.save_npz(self.opbase + '/' + model_name, self.model)
             if bestIoU <= teseval['IoU']:
                 bestIoU = teseval['IoU']
 

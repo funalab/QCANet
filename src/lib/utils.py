@@ -151,9 +151,10 @@ class Utils():
             with open(self.opbase + self.psep + 'result.txt', 'a') as f:
                 f.write('Loading Model: {}\n'.format(model_path))
         except:
-            print('Not Found: {}'.format(model_path))
-            print('Usage : Input File Path of Model (ex ./hoge.model)')
-            sys.exit()
+            serializers.load_hdf5(model_path, model)
+            print('Loading Model: {}'.format(model_path))
+            with open(self.opbase + self.psep + 'result.txt', 'a') as f:
+                f.write('Loading Model: {}\n'.format(model_path))
 
 
     # Oneside Mirroring Padding in Image-wise Processing
