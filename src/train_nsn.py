@@ -104,9 +104,9 @@ def main():
     # Pre-Processing 4 (Image Padding)
     lz, ly, lx = images[ylist[0]].shape
     for t in xlist:
-        images[t] = util.mirrorExtensionImage(images[t], int(patchsize/2))[0:args.paddingsize, 0:args.paddingsize, 0:args.paddingsize]
+        images[t] = util.mirrorExtensionImage(images[t], int(patchsize))[0:args.paddingsize, 0:args.paddingsize, 0:args.paddingsize]
     for t in ylist:
-        images[t] = util.mirrorExtensionImage(images[t], int(patchsize/2))[0:args.paddingsize, 0:args.paddingsize, 0:args.paddingsize]
+        images[t] = util.mirrorExtensionImage(images[t], int(patchsize))[0:args.paddingsize, 0:args.paddingsize, 0:args.paddingsize]
 
     # StrageIndex
     # [t, x, y, z]
