@@ -103,7 +103,7 @@ class GraphDraw():
 
 
     def graph_draw_centroid(self, cent_x, cent_y, cent_z):
-        fig = plt.figure()
+        fig = plt.figure(figsize=(10, 8))
         ax = fig.add_subplot(111, projection='3d')
         #ax = Axes3D(fig)
         ax.set_xlabel("X")
@@ -113,9 +113,13 @@ class GraphDraw():
         ax.set_ylim(0, self.y)
         ax.set_zlim(0, 51)
         cmap =  plt.get_cmap('jet')
+        zero_dim = np.zeros(len(cent_x))
         for i in range(len(cent_x)):
             colors = cmap(i / float(len(cent_x)))
-            ax.plot(np.array(cent_x[i]), np.array(cent_y[i]), np.array(cent_z[i]), "o", color=colors, alpha=0.6, ms=3, mew=0.5)
+            #ax.plot(np.array(cent_x[i]), np.array(cent_y[i]), np.array(cent_z[i]), "o", color=colors, alpha=0.5, ms=2, mew=0.5)
+            ax.plot(np.array(cent_x[i]), np.array(cent_y[i]), np.zeros(len(cent_z[i])), "o", color=colors, alpha=0.5, ms=2, mew=0.5)
+            ax.plot(np.array(cent_x[i]), np.ones(len(cent_y[i])) * self.y, np.array(cent_z[i]), "o", color=colors, alpha=0.5, ms=2, mew=0.5)
+            ax.plot(np.zeros(len(cent_x[i])), np.array(cent_y[i]), np.array(cent_z[i]), "o", color=colors, alpha=0.5, ms=2, mew=0.5)
         filename = self.opbase + self.psep + 'Centroid.pdf'
         plt.savefig(filename)
 

@@ -55,7 +55,9 @@ def main():
     except:
         pass
     for l in range(len(dlist)):
-        img = io.imread(os.path.join(args.indir, 'ws_t{}.tif'.format(l+1)))
+        img = io.imread(os.path.join(args.indir, 'ws_t{0:03d}.tif'.format(l+1)))
+        #img = io.imread(os.path.join(args.indir, 'segimg_{0:03d}.tif'.format(l+1)))
+        #img = io.imread(os.path.join(args.indir, 'segimg_t{}.tif'.format(l+1)))
         if args.labeling4:
             img = morphology.label(img, neighbors=4)
         elif args.labeling8:
@@ -109,16 +111,15 @@ def main():
             f.write('Centroid : {}\n'.format(coordinates))
 
     # Time Scale
-    dt = args.time_slice / float(60 * 24)
-    Time = [dt*x for x in range(len(cnt_num))]
-
-    figbase = opbase + psep + 'figs_criteria'
-    os.mkdir(figbase)
-    gd = GraphDraw(figbase, args.roi)
-    gd.graph_draw_number(Time, cnt_num)
-    gd.graph_draw_volume(Time, sum_vol, mean_vol, std_vol)
-    gd.graph_draw_surface(Time, sum_area, mean_area, std_area)
-    gd.graph_draw_centroid(cent_x, cent_y, cent_z)
+    # dt = args.time_slice / float(60 * 24)
+    # Time = [dt*x for x in range(len(cnt_num))]
+    # figbase = opbase + psep + 'figs_criteria'
+    # os.mkdir(figbase)
+    # gd = GraphDraw(figbase, args.roi)
+    # gd.graph_draw_number(Time, cnt_num)
+    # gd.graph_draw_volume(Time, sum_vol, mean_vol, std_vol)
+    # gd.graph_draw_surface(Time, sum_area, mean_area, std_area)
+    # gd.graph_draw_centroid(cent_x, cent_y, cent_z)
 
 
 if __name__ == '__main__':

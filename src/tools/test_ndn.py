@@ -124,7 +124,7 @@ class TestNDN():
             seg_img = seg_img[0:im_size_ip[0], 0:im_size_ip[1], 0:im_size_ip[2]]
 
         seg_img = (tr.resize(seg_img, im_size, order = 1, preserve_range = True) > 0) * 255
-        filename = self.opbase + self.psep + segbase + self.psep + 'detimg_{}.tif'.format(image_path[image_path.rfind('/')+1:image_path.rfind('.')])
+        filename = self.opbase + self.psep + segbase + self.psep + 'detimg_t{0:03d}.tif'.format(image_path[image_path.rfind('/')+1:image_path.rfind('.')])
         io.imsave(filename, seg_img.astype(np.uint8))
         lab_img = mor.label(seg_img.astype(np.uint16), neighbors=4)
         mask_size = np.unique(lab_img, return_counts=True)[1] < (self.delv + 1)
@@ -132,7 +132,7 @@ class TestNDN():
         lab_img[remove_voxel] = 0
         labels = np.unique(lab_img)
         lab_img = np.searchsorted(labels, lab_img)
-        filename = self.opbase + self.psep + labbase + self.psep + 'labimg_{}.tif'.format(image_path[image_path.rfind('/')+1:image_path.rfind('.')])
+        filename = self.opbase + self.psep + labbase + self.psep + 'labimg_t{0:03d}.tif'.format(image_path[image_path.rfind('/')+1:image_path.rfind('.')])
         io.imsave(filename, lab_img.astype(np.uint16))
 
         return lab_img.astype(np.uint16)
