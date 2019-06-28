@@ -116,47 +116,10 @@ def main():
             chainer.serializers.load_npz(args.model_ndn, ndn)
         except:
             chainer.serializers.load_hdf5(args.model_ndn, ndn)
-    if args.gpu >= 0:
-        cuda.get_device(args.gpu).use()  # Make a specified GPU current
-        nsn.to_gpu()  # Copy the SegmentNucleus model to the GPU
-        ndn.to_gpu()
-
-    # NSN_SGD
-    # nsn = Model_L2(
-    #     ndim=3,
-    #     n_class=2,
-    #     init_channel=16,
-    #     kernel_size=3,
-    #     pool_size=2,
-    #     ap_factor=2,
-    #     gpu=args.gpu,
-    #     class_weight=class_weight,
-    #     loss_func='F.softmax_dice_loss'
-    # )
-    #
-    # # NDN_Adam
-    # ndn = Model_L4(
-    #     ndim=3,
-    #     n_class=2,
-    #     init_channel=12,
-    #     kernel_size=5,
-    #     pool_size=2,
-    #     ap_factor=2,
-    #     gpu=args.gpu,
-    #     class_weight=class_weight,
-    #     loss_func='F.softmax_cross_entropy'
-    # )
-
-    # Def-NDN_Adam
-    # ndn = Model_L3(class_weight=class_weight, n_class=2, init_channel=8,
-    #                kernel_size=3, pool_size=2, ap_factor=2, gpu=args.gpu)
 
     # Load Model
-
-    #chainer.serializers.load_npz(args.model_ndn, ndn)
-    #chainer.serializers.load_npz(args.model_nsn, nsn)
-    #chainer.serializers.load_hdf5(args.model_nsn, nsn)
-    #chainer.serializers.load_hdf5(args.model_ndn, ndn)
+    chainer.serializers.load_npz(args.model_ndn, ndn)
+    chainer.serializers.load_npz(args.model_nsn, nsn)
 
     if args.gpu >= 0:
         cuda.get_device(args.gpu).use()  # Make a specified GPU current
@@ -210,7 +173,7 @@ def main():
                 wsimage = morphology.label(seg_img, neighbors=4)
             labels = np.unique(wsimage)
             wsimage = np.searchsorted(labels, wsimage)
-            filename = opbase + psep + wsbase + psep + 'ws_{}.tif'.format(image_path[image_path.rfind('/')+1:image_path.rfind('.')])
+            filename = opbase + psep + wsbase + psep + 'ws_t{0:03d}.tif'.format(image_path[image_path.rfind('/')+1:image_path.rfind('.')])
             io.imsave(filename, wsimage.astype(np.uint16))
 
             f.write('Number of Nuclei: {}\n'.format(wsimage.max()))

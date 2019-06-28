@@ -19,19 +19,41 @@ class Evaluator():
     def __init__(self):
         pass
 
-
     def mucov(self, y, y_ans):
         sum_iou = 0
         for i in range(1, y.max()+1):
             mask_y = np.array((y == i) * 1).astype(np.uint8)
-            best_iou = 0
+            best_iou, best_thr = 0, 0
             for j in range(1, y_ans.max()+1):
                 mask_y_ans = np.array((y_ans == j) * 1).astype(np.uint8)
-                best_iou = np.max([self.iou(mask_y, mask_y_ans), best_iou])
-            print('best IoU: {}'.format(best_iou))
-            sum_iou += best_iou
+                iou, thr = self.iou(mask_y, mask_y_ans)
+                if best_iou <= iou:
+                    best_iou = iou
+                    best_thr = np.max([thr, best_thr])
+            print('best IoU in MUCov: {}'.format(best_iou))
+            if best_thr > 0.5:
+                sum_iou += best_iou
+            else:
+                sum_iou += 0.0
         return sum_iou / y.max()
 
+    def seg(self, y, y_ans):
+        sum_iou = 0
+        for i in range(1, y_ans.max()+1):
+            mask_y_ans = np.array((y_ans == i) * 1).astype(np.uint8)
+            best_iou, best_thr = 0, 0
+            for j in range(1, y.max()+1):
+                mask_y = np.array((y == j) * 1).astype(np.uint8)
+                iou, thr = self.iou(mask_y, mask_y_ans)
+                if best_iou <= iou:
+                    best_iou = iou
+                    best_thr = np.max([thr, best_thr])
+            print('best IoU in SEG: {}'.format(best_iou))
+            if best_thr > 0.5:
+                sum_iou += best_iou
+            else:
+                sum_iou += 0.0
+        return sum_iou / y_ans.max()
 
     def iou(self, pred, gt):
         countListPos = copy.deepcopy(pred + gt)
@@ -41,10 +63,11 @@ class Evaluator():
         FN = len(np.where(countListNeg.reshape(countListNeg.size)==-1)[0])
         try:
             iou = TP / float(TP + FP + FN)
+            thr = TP / float(TP + FN)
         except:
             iou = 0
-        return iou
-
+            thr = 0
+        return iou, thr
 
     def qca_watershed(self, seg, det):
         distance = ndimage.distance_transform_edt(seg)
@@ -110,7 +133,7 @@ if __name__ == '__main__':
     ap = ArgumentParser(description='python evaluation.py')
     ap.add_argument('--indir', '-i', nargs='?', default='../InstanceSegmentationResult/ROI2_Feb25Sun_2018_001348/WatershedSegmentationImages', help='Specify input files')
     #ap.add_argument('--gtdir', '-g', nargs='?', default='../InstanceSegmentationResult/ROI2_Feb25Sun_2018_001348/WatershedSegmentationImages', help='Specify ground truth files')
-    ap.add_argument('--outdir', '-o', nargs='?', default='EvaluationMUCov', help='Specify output files directory for create figures')
+    ap.add_argument('--outdir', '-o', nargs='?', default='evaluation_of_instance_segmentation', help='Specify output files directory for create figures')
     ap.add_argument('--labeling4', action='store_true', help='Specify Labeling Flag (Gray Scale Image)')
     ap.add_argument('--labeling8', action='store_true', help='Specify Labeling Flag (Gray Scale Image)')
     ap.add_argument('--roi', type=int, help='specify ROI number')
@@ -122,51 +145,59 @@ if __name__ == '__main__':
     with open(opbase + psep + 'result.txt', 'w') as f:
         f.write('python ' + ' '.join(argvs) + '\n')
 
-    # t_list = [1, 50, 100, 150, 188, 250, 256, 257, 258, 262, 320, 335, 338, 350, 398, 450, 474, 502]
-    # n_list = [2, 2, 2, 2, 3, 4, 5, 7, 7, 8, 9, 13, 14, 16, 20, 32, 40, 50]
     t_list = [1, 51, 101, 151, 201, 251, 301, 351, 401, 451, 501]
+    #t_list = os.listdir(args.indir)
 
     evaluation = Evaluator()
-    all_iou, all_mucov = [], []
+    all_iou, all_mucov, all_seg = [], [], []
 
     with open(opbase + psep + 'result.txt', 'a') as f:
         for t in t_list:
             if args.labeling4:
-                seg = io.imread(args.indir + psep + 'segimg_{0:03d}.tif'.format(t))
-                #seg = io.imread(args.indir + psep + 'segimg_t{}.tif'.format(t))
-                seg = morphology.label(seg, neighbors=4)
+                pre = io.imread(args.indir + psep + 'segimg_t{0:03d}.tif'.format(t))
+                pre = morphology.label(pre, neighbors=4)
             elif args.labeling8:
-                seg = io.imread(args.indir + psep + 'segimg_{0:03d}.tif'.format(t))
-                #seg = io.imread(args.indir + psep + 'segimg_t{}.tif'.format(t))
-                seg = morphology.label(seg, neighbors=8)
+                pre = io.imread(args.indir + psep + 'segimg_t{0:03d}.tif'.format(t))
+                pre = morphology.label(pre, neighbors=8)
             else:
-                #seg = io.imread(args.indir + psep + 'ws_{0:03d}.tif'.format(t))
-                seg = io.imread(args.indir + psep + 'ws_t{}.tif'.format(t))
-            labels = np.unique(seg)
-            seg = np.searchsorted(labels, seg)
-            seg_bin = np.array((seg > 0) * 1).astype(np.uint8)
+                pre = io.imread(args.indir + psep + 'ws_t{0:03d}.tif'.format(t))
+                #pre = io.imread(args.indir + psep + '{}'.format(t))
+            labels = np.unique(pre)
+            pre = np.searchsorted(labels, pre)
+            pre_bin = np.array((pre > 0) * 1).astype(np.uint8)
 
             filename = 'datasets/images_qcanet_tif/ROI{}_t{}.tif'.format(args.roi, t)
+            #filename = 'datasets/images_qcanet_tif/{}'.format(t[t.find('_')+1:])
             gt = io.imread(filename)
             gt_bin = np.array((gt > 0) * 1).astype(np.uint8)
 
-            iou = evaluation.iou(seg_bin, gt_bin)
-            mucov = evaluation.mucov(seg, gt)
+            iou, _ = evaluation.iou(pre_bin, gt_bin)
+            mucov = evaluation.mucov(pre, gt)
+            seg = evaluation.seg(pre, gt)
             all_iou.append(iou)
             all_mucov.append(mucov)
+            all_seg.append(seg)
             print('tp{}: IoU={}'.format(t, iou))
             print('tp{}: MUCov={}'.format(t, mucov))
+            print('tp{}: SEG={}'.format(t, seg))
             f.write('tp{}: IoU={}\n'.format(t, iou))
             f.write('tp{}: MUCov={}\n'.format(t, mucov))
+            f.write('tp{}: SEG={}\n'.format(t, seg))
         mean_iou = np.mean(all_iou)
         std_iou = np.std(all_iou)
         mean_mucov = np.mean(all_mucov)
         std_mucov = np.std(all_mucov)
+        mean_seg = np.mean(all_seg)
+        std_seg = np.std(all_seg)
         print('Mean IoU: {}'.format(mean_iou))
         print('Std IoU: {}'.format(std_iou))
         print('Mean MUCov: {}'.format(mean_mucov))
         print('Std MUCov: {}'.format(std_mucov))
+        print('Mean SEG: {}'.format(mean_seg))
+        print('Std SEG: {}'.format(std_seg))
         f.write('Mean IoU={}\n'.format(mean_iou))
         f.write('Std IoU={}\n'.format(std_iou))
         f.write('Mean MUCov={}\n'.format(mean_mucov))
         f.write('Std MUCov={}\n'.format(std_mucov))
+        f.write('Mean SEG={}\n'.format(mean_seg))
+        f.write('Std SEG={}\n'.format(std_seg))

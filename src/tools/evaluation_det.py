@@ -61,18 +61,8 @@ opbase = opbase + '_' + t[1] + t[2] + t[0] + '_' + t[4] + '_' + t[3].split(':')[
 # Output Directory の有無を Check
 if not (pt.exists(opbase)):
     os.mkdir(opbase)
-    print 'Output Directory not exist! Create...'
-print 'Output Directory:', opbase
-
-
-# Read Image
-# imagePathes = map(lambda a:os.path.join(args.input,a),os.listdir(args.input))
-# try:
-#     imagePathes.pop(imagePathes.index(args.input + '.DS_Store'))
-# except:
-#     pass
-# imagePathes = np.sort(imagePathes)
-# images = np.array(map(lambda x: skimage.imread(x), imagePathes)).astype(np.uint8)
+    print('Output Directory not exist! Create...')
+print('Output Directory:', opbase)
 
 
 # Read GT
@@ -115,8 +105,6 @@ PRcenter = []
 filename = opbase + psep + 'center.csv'
 f = open(filename, 'w')
 c = csv.writer(f)
-# Read Image Center
-
 dlist = os.listdir(args.input)
 try:
     dlist.pop(dlist.index('.DS_Store'))
@@ -124,7 +112,7 @@ except:
     pass
 
 for num in range(len(dlist)):
-    image = io.imread(os.path.join(args.input, 'labimg_t{}.tif'.format(num+1)))
+    image = io.imread(os.path.join(args.input, 'labimg_t{0:03d}.tif'.format(num+1)))
     z, y, x = np.shape(image)
     if args.labeling4:
         marker = morphology.label(image, neighbors=4)
@@ -196,9 +184,9 @@ FN = numGT - TP
 Sen = TP / float(TP + FN)
 Pre = TP / float(TP + FP)
 Fmeasure = 2 * Pre * Sen / (Pre + Sen)
-print 'Sensitivity: ' + str(Sen)
-print 'Precision: ' + str(Pre)
-print 'F-measure: ' + str(Fmeasure)
+print('Sensitivity: ' + str(Sen))
+print('Precision: ' + str(Pre))
+print('F-measure: ' + str(Fmeasure))
 
 filename = opbase + psep + 'result.txt'
 f = open(filename, 'a')
