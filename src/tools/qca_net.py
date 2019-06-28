@@ -98,9 +98,11 @@ def main():
 
     print('Initializing models...')
 
+    #args.model = 'NDN'
+    #args.ch_base = 16
     nsn = get_model(args)
     args.model = 'NDN'
-    args.ch_base = 16
+    args.ch_base = 12
     ndn = get_model(args)
     if args.model_nsn is not None:
         print('Load NSN from', args.model_nsn)
@@ -151,8 +153,8 @@ def main():
 
     # Load Model
 
-    chainer.serializers.load_npz(args.model_ndn, ndn)
-    chainer.serializers.load_npz(args.model_nsn, nsn)
+    #chainer.serializers.load_npz(args.model_ndn, ndn)
+    #chainer.serializers.load_npz(args.model_nsn, nsn)
     #chainer.serializers.load_hdf5(args.model_nsn, nsn)
     #chainer.serializers.load_hdf5(args.model_ndn, ndn)
 

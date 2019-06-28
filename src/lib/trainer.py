@@ -49,11 +49,13 @@ class NSNTrainer():
             opt_nsn = optimizers.Adam()
             opt_nsn.setup(self.model)
             #opt_nsn.add_hook(chainer.optimizer.WeightDecay(0.00000416029939))
-            opt_nsn.add_hook(chainer.optimizer.WeightDecay(0.000001))
+            opt_nsn.add_hook(chainer.optimizer.WeightDecay(0.001))
 
         elif self.opt_method == 'SGD':
             opt_nsn = optimizers.SGD(lr=1.0)
+            #opt_nsn = optimizers.SGD(lr=0.01)
             opt_nsn.setup(self.model)
+            #opt_nsn.add_hook(chainer.optimizer.WeightDecay(0.001))
             opt_nsn.add_hook(chainer.optimizer.WeightDecay(0.00009))
 
         elif self.opt_method == 'MomentumSGD':
@@ -114,7 +116,9 @@ class NSNTrainer():
                 pastLoss = train_sum_loss
 
             if train_sum_loss > pastLoss and self.opt_method == 'SGD':
+            #if epoch % 100 == 0:
                 learning_rate = opt_nsn.lr * 1.0
+                #learning_rate = opt_nsn.lr * 0.1
                 opt_nsn = optimizers.SGD(learning_rate)
                 opt_nsn.setup(self.model)
                 with open(self.opbase + '/result.txt', 'a') as f:
@@ -143,8 +147,11 @@ class NSNTrainer():
                 bestIoU = teseval['IoU']
                 bestEpoch = epoch
                 # Save Model
-                model_name = 'NSN_IoU_p' + str(self.patchsize) + '.npz'
-                serializers.save_npz(self.opbase + '/' + model_name, self.model)
+                if epoch > 0:
+                    model_name = 'NSN_IoU_p' + str(self.patchsize) + '.npz'
+                    serializers.save_npz(self.opbase + '/' + model_name, self.model)
+                else:
+                    bestIoU = 0.0
 
         bestScore = [bestAccuracy, bestRecall, bestPrecision, bestSpecificity, bestFmeasure, bestIoU]
         print('========================================')
@@ -364,12 +371,12 @@ class NDNTrainer():
         train_iter, val_iter = iterators
 
         if self.opt_method == 'Adam':
-            #opt_ndn = optimizers.Adam(alpha=0.07984883572883512, beta1=0.9113157387413141,
-            #                          beta2=0.9931108449092836, eps=0.07309957525741932)
-            opt_ndn = optimizers.Adam()
+            opt_ndn = optimizers.Adam(alpha=0.07984883572883512, beta1=0.9113157387413141,
+                                      beta2=0.9931108449092836, eps=0.07309957525741932)
+            #opt_ndn = optimizers.Adam()
             opt_ndn.setup(self.model)
-            #opt_ndn.add_hook(chainer.optimizer.WeightDecay(0.00000570679784139))
-            opt_ndn.add_hook(chainer.optimizer.WeightDecay(0.000001))
+            opt_ndn.add_hook(chainer.optimizer.WeightDecay(0.00000570679784139))
+            #opt_ndn.add_hook(chainer.optimizer.WeightDecay(0.000001))
 
         elif self.opt_method == 'SGD':
             opt_ndn = optimizers.SGD(lr=0.66243829123061737)
