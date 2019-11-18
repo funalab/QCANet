@@ -122,7 +122,7 @@ class TestNSN():
             seg_img = (pre_img > 0) * 255
             seg_img = seg_img[:im_size_ip[0], :im_size_ip[1], :im_size_ip[2]]
         seg_img = (tr.resize(seg_img, im_size, order = 1, preserve_range = True) > 0) * 255
-        filename = self.opbase + self.psep + segbase + self.psep + 'segimg_t{0:03d}.tif'.format(image_path[image_path.rfind('/')+1:image_path.rfind('.')])
+        filename = self.opbase + self.psep + segbase + self.psep + 'segimg_t{0:03d}.tif'.format(int(image_path[image_path.rfind('/')+1:image_path.rfind('.')]))
         io.imsave(filename, seg_img.astype(np.uint8))
 
         return seg_img.astype(np.uint16)

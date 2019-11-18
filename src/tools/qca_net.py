@@ -173,7 +173,7 @@ def main():
                 wsimage = morphology.label(seg_img, neighbors=4)
             labels = np.unique(wsimage)
             wsimage = np.searchsorted(labels, wsimage)
-            filename = opbase + psep + wsbase + psep + 'ws_t{0:03d}.tif'.format(image_path[image_path.rfind('/')+1:image_path.rfind('.')])
+            filename = opbase + psep + wsbase + psep + 'ws_t{0:03d}.tif'.format(int(image_path[image_path.rfind('/')+1:image_path.rfind('.')]))
             io.imsave(filename, wsimage.astype(np.uint16))
 
             f.write('Number of Nuclei: {}\n'.format(wsimage.max()))

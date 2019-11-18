@@ -399,7 +399,7 @@ class NDNTrainer():
             print('[epoch {}]'.format(epoch))
             traeval, train_sum_loss = self._trainer(train_iter, opt_ndn, epoch=epoch)
             train_eval['loss'].append(train_sum_loss / (N_train * self.batchsize))
-            if epoch > 20:
+            if epoch > 0:
                 teseval, test_sum_loss = self._validater(val_iter, epoch=epoch)
                 test_eval['loss'].append(test_sum_loss / (N_test * self.batchsize))
             else:
