@@ -50,12 +50,10 @@ class TestNSN():
         im_size = image.shape
         if self.ndim == 2:
             ip_size = (int(image.shape[0] * self.resolution[1]), int(image.shape[1] * self.resolution[0]))
-            sh = [self.stride[0]/2, self.stride[1]/2]
+            sh = [int(self.stride[0]/2), int(self.stride[1]/2)]
         elif self.ndim == 3:
-            print(image.shape)
-            print(self.resolution)
             ip_size = (int(image.shape[0] * self.resolution[2]), int(image.shape[1] * self.resolution[1]), int(image.shape[2] * self.resolution[0]))
-            sh = [self.stride[0]/2, self.stride[1]/2, self.stride[2]/2]
+            sh = [int(self.stride[0]/2), int(self.stride[1]/2), int(self.stride[2]/2)]
         print('ip_size: {}'.format(ip_size))
         image = tr.resize(image, ip_size, order = 1, preserve_range = True)
         im_size_ip = image.shape
@@ -83,7 +81,7 @@ class TestNSN():
                     stride_num = int((im_size_ip[axis] + 2*sh[axis] - self.patchsize[axis]) / self.stride[axis])
                 else:
                     stride_num = int((im_size_ip[axis] + 2*sh[axis] - self.patchsize[axis]) / self.stride[axis]) + 1
-                pad_size.append(self.stride[axis] * stride_num + self.patchsize[axis])
+                pad_size.append(int(self.stride[axis] * stride_num + self.patchsize[axis]))
 
         pre_img = np.zeros(pad_size)
 
@@ -122,7 +120,8 @@ class TestNSN():
             seg_img = (pre_img > 0) * 255
             seg_img = seg_img[:im_size_ip[0], :im_size_ip[1], :im_size_ip[2]]
         seg_img = (tr.resize(seg_img, im_size, order = 1, preserve_range = True) > 0) * 255
-        filename = self.opbase + self.psep + segbase + self.psep + 'segimg_t{0:03d}.tif'.format(int(image_path[image_path.rfind('/')+1:image_path.rfind('.')]))
+        filename = self.opbase + self.psep + segbase + self.psep + os.path.basename(image_path)
+        #filename = self.opbase + self.psep + segbase + self.psep + 'segimg_t{0:03d}.tif'.format(int(image_path[image_path.rfind('/')+1:image_path.rfind('.')]))
         io.imsave(filename, seg_img.astype(np.uint8))
 
         return seg_img.astype(np.uint16)

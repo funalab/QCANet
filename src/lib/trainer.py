@@ -39,6 +39,7 @@ class NSNTrainer():
         self.opt_method = opt_method
         self.criteria = ['Accuracy', 'Recall', 'Precision', 'Specificity', 'F-measure', 'IoU']
         self.ndim = ndim
+        self.val_iteration = 10
 
     def training(self, iterators):
         train_iter, val_iter = iterators
@@ -80,8 +81,16 @@ class NSNTrainer():
             print('[epoch {}]'.format(epoch))
             traeval, train_sum_loss = self._trainer(train_iter, opt_nsn, epoch=epoch)
             train_eval['loss'].append(train_sum_loss / (N_train * self.batchsize))
-            teseval, test_sum_loss = self._validater(val_iter, epoch=epoch)
-            test_eval['loss'].append(test_sum_loss / (N_test * self.batchsize))
+
+            if epoch % self.val_iteration == 0:
+                teseval, test_sum_loss = self._validater(val_iter, epoch=epoch)
+                test_eval['loss'].append(test_sum_loss / (N_test * self.batchsize))
+            else:
+                teseval = {}
+                for cri in self.criteria:
+                    teseval[cri] = 0
+                    test_eval['loss'].append(0)
+                    test_sum_loss = 0
 
             for cri in self.criteria:
                 train_eval[cri].append(traeval[cri])
@@ -101,14 +110,15 @@ class NSNTrainer():
                 f.write('train accuracy={}, train recall={}\n'.format(traeval['Accuracy'], traeval['Recall']))
                 f.write('train precision={}, specificity={}\n'.format(traeval['Precision'], traeval['Specificity']))
                 f.write('train F-measure={}, IoU={}\n'.format(traeval['F-measure'], traeval['IoU']))
-                f.write('test mean loss={}\n'.format(test_sum_loss / (N_test * self.batchsize)))
-                f.write('test accuracy={}, recall={}\n'.format(teseval['Accuracy'], teseval['Recall']))
-                f.write('test precision={}, specificity={}\n'.format(teseval['Precision'], teseval['Specificity']))
-                f.write('test F-measure={}, IoU={}\n'.format(teseval['F-measure'], teseval['IoU']))
+                if epoch % self.val_iteration == 0:
+                    f.write('validation mean loss={}\n'.format(test_sum_loss / (N_test * self.batchsize)))
+                    f.write('validation accuracy={}, recall={}\n'.format(teseval['Accuracy'], teseval['Recall']))
+                    f.write('validation precision={}, specificity={}\n'.format(teseval['Precision'], teseval['Specificity']))
+                    f.write('validation F-measure={}, IoU={}\n'.format(teseval['F-measure'], teseval['IoU']))
             with open(self.opbase + '/TrainResult.csv', 'a') as f:
                 c = csv.writer(f)
                 c.writerow([epoch, traeval['Accuracy'], traeval['Recall'], traeval['Precision'], traeval['Specificity'], traeval['F-measure'], traeval['IoU']])
-            with open(self.opbase + '/TestResult.csv', 'a') as f:
+            with open(self.opbase + '/ValResult.csv', 'a') as f:
                 c = csv.writer(f)
                 c.writerow([epoch, teseval['Accuracy'], teseval['Recall'], teseval['Precision'], teseval['Specificity'], teseval['F-measure'], teseval['IoU']])
 
@@ -203,8 +213,8 @@ class NSNTrainer():
                 s_output = cuda.to_cpu(s_output)
             #make pred (0 : background, 1 : object)
             pred = copy.deepcopy((0 < (s_output[0][1] - s_output[0][0])) * 1)
-            countListPos = copy.deepcopy(pred + y_patch)
-            countListNeg = copy.deepcopy(pred - y_patch)
+            countListPos = copy.deepcopy(pred.astype(np.int16) + y_patch.astype(np.int16))
+            countListNeg = copy.deepcopy(pred.astype(np.int16) - y_patch.astype(np.int16))
             TP += len(np.where(countListPos.reshape(countListPos.size)==2)[0])
             TN += len(np.where(countListPos.reshape(countListPos.size)==0)[0])
             FP += len(np.where(countListNeg.reshape(countListNeg.size)==1)[0])
@@ -295,8 +305,8 @@ class NSNTrainer():
             gt = gt[0]
             io.imsave('{}/segimg{}_validation.tif'.format(self.opbase, num), np.array(seg_img * 255).astype(np.uint8))
             io.imsave('{}/gtimg{}_validation.tif'.format(self.opbase, num), np.array(gt * 255).astype(np.uint8))
-            countListPos = copy.deepcopy(seg_img + gt)
-            countListNeg = copy.deepcopy(seg_img - gt)
+            countListPos = copy.deepcopy(seg_img.astype(np.int16) + gt.astype(np.int16))
+            countListNeg = copy.deepcopy(seg_img.astype(np.int16) - gt.astype(np.int16))
             TP += len(np.where(countListPos.reshape(countListPos.size)==2)[0])
             TN += len(np.where(countListPos.reshape(countListPos.size)==0)[0])
             FP += len(np.where(countListNeg.reshape(countListNeg.size)==1)[0])
@@ -365,6 +375,7 @@ class NDNTrainer():
         self.delv = delv
         self.r_thr = r_thr
         self.ndim = ndim
+        self.val_iteration = 10
 
 
     def training(self, iterators):
@@ -399,7 +410,7 @@ class NDNTrainer():
             print('[epoch {}]'.format(epoch))
             traeval, train_sum_loss = self._trainer(train_iter, opt_ndn, epoch=epoch)
             train_eval['loss'].append(train_sum_loss / (N_train * self.batchsize))
-            if epoch > 0:
+            if epoch % self.val_iteration == 0:
                 teseval, test_sum_loss = self._validater(val_iter, epoch=epoch)
                 test_eval['loss'].append(test_sum_loss / (N_test * self.batchsize))
             else:
@@ -425,13 +436,14 @@ class NDNTrainer():
                 f.write('train mean loss={}\n'.format(train_sum_loss / (N_train * self.batchsize)))
                 f.write('train recall={}, presicion={}\n'.format(traeval['Recall'], traeval['Precision']))
                 f.write('train F-measure={}, IoU={}\n'.format(traeval['F-measure'], traeval['IoU']))
-                f.write('test mean loss={}\n'.format(test_sum_loss / (N_test * self.batchsize)))
-                f.write('test recall={}, presicion={}\n'.format(teseval['Recall'], teseval['Precision']))
-                f.write('test F-measure={}, IoU={}\n'.format(teseval['F-measure'], teseval['IoU']))
+                if epoch % self.val_iteration == 0:
+                    f.write('validation mean loss={}\n'.format(test_sum_loss / (N_test * self.batchsize)))
+                    f.write('validation recall={}, presicion={}\n'.format(teseval['Recall'], teseval['Precision']))
+                    f.write('validation F-measure={}, IoU={}\n'.format(teseval['F-measure'], teseval['IoU']))
             with open(self.opbase + '/TrainResult.csv', 'a') as f:
                 c = csv.writer(f)
                 c.writerow([epoch, traeval['Recall'], traeval['Precision'], traeval['F-measure'], traeval['IoU']])
-            with open(self.opbase + '/TestResult.csv', 'a') as f:
+            with open(self.opbase + '/ValResult.csv', 'a') as f:
                 c = csv.writer(f)
                 c.writerow([epoch, teseval['Recall'], teseval['Precision'], teseval['F-measure'], teseval['IoU']])
 
@@ -513,7 +525,7 @@ class NDNTrainer():
                 s_output = cuda.to_cpu(s_output)
             #make pred (0 : background, 1 : object)
             pred = copy.deepcopy((0 < (s_output[0][1] - s_output[0][0])) * 1)
-            if epoch > 20:
+            if epoch % self.val_iteration == 0:
                 #make Centroid Pred (0 : background, 1 : object)
                 markers_pr = morphology.label(pred, neighbors=4)
                 mask_size = np.unique(markers_pr, return_counts=True)[1] < (self.delv + 1)

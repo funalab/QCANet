@@ -107,19 +107,19 @@ def main():
     if args.model_nsn is not None:
         print('Load NSN from', args.model_nsn)
         try:
-            chainer.serializers.load_npz(args.model_nsn, nsn)
+            chainer.serializers.load_npz(args.model_nsn, nsn, strict=False)
         except:
             chainer.serializers.load_hdf5(args.model_nsn, nsn)
     if args.model_ndn is not None:
         print('Load NDN from', args.model_ndn)
         try:
-            chainer.serializers.load_npz(args.model_ndn, ndn)
+            chainer.serializers.load_npz(args.model_ndn, ndn, strict=False)
         except:
             chainer.serializers.load_hdf5(args.model_ndn, ndn)
 
     # Load Model
-    chainer.serializers.load_npz(args.model_ndn, ndn)
-    chainer.serializers.load_npz(args.model_nsn, nsn)
+    chainer.serializers.load_npz(args.model_ndn, ndn, strict=False)
+    chainer.serializers.load_npz(args.model_nsn, nsn, strict=False)
 
     if args.gpu >= 0:
         cuda.get_device(args.gpu).use()  # Make a specified GPU current
@@ -173,7 +173,8 @@ def main():
                 wsimage = morphology.label(seg_img, neighbors=4)
             labels = np.unique(wsimage)
             wsimage = np.searchsorted(labels, wsimage)
-            filename = opbase + psep + wsbase + psep + 'ws_t{0:03d}.tif'.format(int(image_path[image_path.rfind('/')+1:image_path.rfind('.')]))
+            filename = opbase + psep + wsbase + psep + os.path.basename(image_path)
+            # filename = opbase + psep + wsbase + psep + 'ws_t{0:03d}.tif'.format(int(image_path[image_path.rfind('/')+1:image_path.rfind('.')]))
             io.imsave(filename, wsimage.astype(np.uint16))
 
             f.write('Number of Nuclei: {}\n'.format(wsimage.max()))

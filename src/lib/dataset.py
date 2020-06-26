@@ -98,10 +98,10 @@ def crop_pair_3d(
         image1,
         image2,
         crop_size=(128, 128, 128),
-        #nonzero_image1_thr=0.001,
-        nonzero_image1_thr=0.0,
-        #nonzero_image2_thr=0.001,
-        nonzero_image2_thr=0.0,
+        nonzero_image1_thr=0.0001,
+        #nonzero_image1_thr=0.0,
+        nonzero_image2_thr=0.0001,
+        #nonzero_image2_thr=0.0,
         nb_crop=1,
         augmentation=True
     ):

@@ -56,10 +56,10 @@ class TestNDN():
         im_size = image.shape
         if self.ndim == 2:
             ip_size = (int(image.shape[0] * self.resolution[1]), int(image.shape[1] * self.resolution[0]))
-            sh = [self.stride[0]/2, self.stride[1]/2]
+            sh = [int(self.stride[0]/2), int(self.stride[1]/2)]
         elif self.ndim == 3:
             ip_size = (int(image.shape[0] * self.resolution[2]), int(image.shape[1] * self.resolution[1]), int(image.shape[2] * self.resolution[0]))
-            sh = [self.stride[0]/2, self.stride[1]/2, self.stride[2]/2]
+            sh = [int(self.stride[0]/2), int(self.stride[1]/2), int(self.stride[2]/2)]
         image = tr.resize(image, ip_size, order = 1, preserve_range = True)
         im_size_ip = image.shape
 
@@ -80,11 +80,12 @@ class TestNDN():
         else:
             pad_size = []
             for axis in range(len(im_size_ip)):
-                if (ip_size[axis] + 2*sh[axis] - self.patchsize[axis]) % self.stride[axis] == 0:
-                    stride_num = (im_size_ip[axis] + 2*sh[axis] - self.patchsize[axis]) / self.stride[axis]
+                if (im_size_ip[axis] + 2*sh[axis] - self.patchsize[axis]) % self.stride[axis] == 0:
+                    stride_num = int((im_size_ip[axis] + 2*sh[axis] - self.patchsize[axis]) / self.stride[axis])
                 else:
-                    stride_num = (im_size_ip[axis] + 2*sh[axis] - self.patchsize[axis]) / self.stride[axis] + 1
-                pad_size.append(self.stride[axis] * stride_num + self.patchsize[axis])
+                    stride_num = int((im_size_ip[axis] + 2*sh[axis] - self.patchsize[axis]) / self.stride[axis]) + 1
+                pad_size.append(int(self.stride[axis] * stride_num + self.patchsize[axis]))
+
 
         pre_img = np.zeros(pad_size)
 
@@ -124,7 +125,8 @@ class TestNDN():
             seg_img = seg_img[0:im_size_ip[0], 0:im_size_ip[1], 0:im_size_ip[2]]
 
         seg_img = (tr.resize(seg_img, im_size, order = 1, preserve_range = True) > 0) * 255
-        filename = self.opbase + self.psep + segbase + self.psep + 'detimg_t{0:03d}.tif'.format(int(image_path[image_path.rfind('/')+1:image_path.rfind('.')]))
+        filename = self.opbase + self.psep + segbase + self.psep + os.path.basename(image_path)
+        # filename = self.opbase + self.psep + segbase + self.psep + 'detimg_t{0:03d}.tif'.format(int(image_path[image_path.rfind('/')+1:image_path.rfind('.')]))
         io.imsave(filename, seg_img.astype(np.uint8))
         lab_img = mor.label(seg_img.astype(np.uint16), neighbors=4)
         mask_size = np.unique(lab_img, return_counts=True)[1] < (self.delv + 1)
@@ -132,7 +134,8 @@ class TestNDN():
         lab_img[remove_voxel] = 0
         labels = np.unique(lab_img)
         lab_img = np.searchsorted(labels, lab_img)
-        filename = self.opbase + self.psep + labbase + self.psep + 'labimg_t{0:03d}.tif'.format(int(image_path[image_path.rfind('/')+1:image_path.rfind('.')]))
+        filename = self.opbase + self.psep + labbase + self.psep + os.path.basename(image_path)
+        # filename = self.opbase + self.psep + labbase + self.psep + 'labimg_t{0:03d}.tif'.format(int(image_path[image_path.rfind('/')+1:image_path.rfind('.')]))
         io.imsave(filename, lab_img.astype(np.uint16))
 
         return lab_img.astype(np.uint16)
