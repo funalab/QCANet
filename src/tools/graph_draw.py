@@ -29,6 +29,8 @@ class GraphDraw():
         self.psep = '/'
         self.x = 127
         self.y = 124
+        self.z = 111
+        self.density = 0
         if roi != 0:
             with open('GT/10minGroundTruth/CSVfile/test{}.csv'.format(roi), 'r') as f:
                 dataReader = csv.reader(f)
@@ -116,12 +118,43 @@ class GraphDraw():
         zero_dim = np.zeros(len(cent_x))
         for i in range(len(cent_x)):
             colors = cmap(i / float(len(cent_x)))
-            #ax.plot(np.array(cent_x[i]), np.array(cent_y[i]), np.array(cent_z[i]), "o", color=colors, alpha=0.5, ms=2, mew=0.5)
-            ax.plot(np.array(cent_x[i]), np.array(cent_y[i]), np.zeros(len(cent_z[i])), "o", color=colors, alpha=0.5, ms=2, mew=0.5)
-            ax.plot(np.array(cent_x[i]), np.ones(len(cent_y[i])) * self.y, np.array(cent_z[i]), "o", color=colors, alpha=0.5, ms=2, mew=0.5)
-            ax.plot(np.zeros(len(cent_x[i])), np.array(cent_y[i]), np.array(cent_z[i]), "o", color=colors, alpha=0.5, ms=2, mew=0.5)
+            ax.plot(np.array(cent_x[i]), np.array(cent_y[i]), np.array(cent_z[i]), "o", color=colors, alpha=0.5, ms=2, mew=0.5)
+            # ax.plot(np.array(cent_x[i]), np.array(cent_y[i]), np.zeros(len(cent_z[i])), "o", color=colors, alpha=0.5, ms=2, mew=0.5)
+            # ax.plot(np.array(cent_x[i]), np.ones(len(cent_y[i])) * self.y, np.array(cent_z[i]), "o", color=colors, alpha=0.5, ms=2, mew=0.5)
+            # ax.plot(np.zeros(len(cent_x[i])), np.array(cent_y[i]), np.array(cent_z[i]), "o", color=colors, alpha=0.5, ms=2, mew=0.5)
         filename = self.opbase + self.psep + 'Centroid.pdf'
         plt.savefig(filename)
+
+
+    def graph_draw_lfunction(self, cent_x, cent_y, cent_z):
+        roi = {}
+        center = (self.x/2, self.y/2, self.z/2)
+        radius_list = [i for i in range(int(self.z/2))]
+        for r in radius_list:
+            roi[r] = []
+        for x in range(self.x):
+            for y in range(self.y):
+                for z in range(self.z):
+                    for r in radius_list:
+                        if (x - center[0]) ** 2 + (y - center[1]) ** 2 + (z - center[2]) ** 2 < r ** 2 and \
+                            (x - center[0]) ** 2 + (y - center[1]) ** 2 + (z - center[2]) ** 2 >= (r - 1) ** 2:
+                            roi[r].append([x, y, z])
+        print('roi complete.')
+        cmap =  plt.get_cmap('Paired')
+        plt.figure(figsize=(10, 8))
+        plt.plot(radius_list, [self.volume_density(roi, r, cent_x, cent_y, cent_z) for r in radius_list], alpha=0.8, linewidth=1.0)
+        filename = self.opbase + self.psep + 'L-function.pdf'
+        plt.savefig(filename)
+
+    def volume_density(self, roi, radius, cent_x, cent_y, cent_z):
+        density = 0
+        for t in zip(cent_x, cent_y, cent_z):
+            for cent in zip(t[0], t[1], t[2]):
+                if [int(cent[0]), int(cent[1]), int(cent[2])] in roi[radius]:
+                    density += 1
+        self.density += density
+        print('radius 1 count.')
+        return self.density
 
 
     def graph_draw_centroid_2axis(self, cent_x, cent_y, axis):
@@ -218,7 +251,8 @@ if __name__ == '__main__':
     gd.graph_draw_volume(Time, SumVol, MeanVol, VarVol)
     gd.graph_draw_surface(Time, SumArea, MeanArea, VarArea)
     gd.graph_draw_centroid(Cent_X, Cent_Y, Cent_Z)
-    gd.graph_draw_centroid_2axis(Cent_X, Cent_Y, 'XY')
-    gd.graph_draw_centroid_2axis(Cent_Z, Cent_Y, 'YZ')
-    gd.graph_draw_centroid_2axis(Cent_X, Cent_Z, 'ZX')
+    gd.graph_draw_lfunction(Cent_X, Cent_Y, Cent_Z)
+    # gd.graph_draw_centroid_2axis(Cent_X, Cent_Y, 'XY')
+    # gd.graph_draw_centroid_2axis(Cent_Z, Cent_Y, 'YZ')
+    # gd.graph_draw_centroid_2axis(Cent_X, Cent_Z, 'ZX')
     plt.show()
