@@ -23,7 +23,7 @@ The left hand side of the image(movie) is the early-stage mouse embryo, whose ce
 
 ## Requirements
 
-- [Python 2.7](https://www.python.org/download/releases/2.7/)
+- [Python 2.7, 3.6](https://www.python.org/downloads/)
 - [Chainer 1.24+](https://chainer.org/)
 - [Matplotlib](https://matplotlib.org/)
 - [NumPy](http://www.numpy.org)
