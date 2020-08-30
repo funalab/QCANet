@@ -1,4 +1,4 @@
-# QCA Net: Quantitative Criterion Acquisition Network
+# QCANet: Quantitative Criteria Acquisition Network
 
 This is the code for [Convolutional Neural Network-Based Instance Segmentation Algorithm to Acquire Quantitative Criteria of Early Mouse Development](https://doi.org/10.1101/324186).
 This project is carried out in cooperation with [Funahashi lab at Keio University](https://fun.bio.keio.ac.jp/) and three labs: Hiroi lab at Sanyo-onoda City University, [Kobayashi lab at the University of Tokyo](http://research.crmind.net/), and Yamagata lab at Kindai University.
@@ -6,16 +6,16 @@ This project is carried out in cooperation with [Funahashi lab at Keio Universit
 
 ## Overview
 
-Quantitative Criterion Acquisition Network (QCA Net) performs instance segmentation of 3D fluorescence microscopic images.
-QCA Net consists of Nuclear Segmentation Network (NSN) that learned nuclear segmentation task and Nuclear Detection Network (NDN) that learned nuclear identification task.
-QCA Net performs instance segmentation of the time-series 3D fluorescence microscopic images at each time point, and the quantitative criteria for mouse development are extracted from the acquired time-series segmentation image.
+Quantitative Criteria Acquisition Network (QCANet) performs instance segmentation of 3D fluorescence microscopic images.
+QCANet consists of Nuclear Segmentation Network (NSN) that learned nuclear segmentation task and Nuclear Detection Network (NDN) that learned nuclear identification task.
+QCANet performs instance segmentation of the time-series 3D fluorescence microscopic images at each time point, and the quantitative criteria for mouse development are extracted from the acquired time-series segmentation image.
 The detailed information on this program is described in our manuscript posted on [bioRxiv](https://doi.org/10.1101/324186).
 
 
 ## Performance
 
-The result of instance segmentation of time-series 3D fluorescence microscopic images using QCA Net is shown below.
-The left hand side of the image(movie) is the early-stage mouse embryo, whose cell nuclei were fluorescently labeled with mRFP1 fused to histone 2B, which is a chromatin marker. The right hand side of the image(movie) is the segmentation image obtained by QCA Net.
+The result of instance segmentation of time-series 3D fluorescence microscopic images using QCANet is shown below.
+The left hand side of the image(movie) is the early-stage mouse embryo, whose cell nuclei were fluorescently labeled with mRFP1 fused to histone 2B, which is a chromatin marker. The right hand side of the image(movie) is the segmentation image obtained by QCANet.
 
 ![segmentation_result](raw/segmentation_result.gif)
 
@@ -32,22 +32,35 @@ The left hand side of the image(movie) is the early-stage mouse embryo, whose ce
 
 ## QuickStart
 
-1. Download the QCANet repository by `git lfs clone`. Please note to use `git lfs
-   clone` instead of `git clone` because the learned model is huge to be
-   handled with github, so we decided to store the learned model on Git LFS.
-   Please follow the instruction on [Git Large File Storage](https://git-lfs.github.com) to install Git LFS on your system.
-2. Change directory to `QCANet/src`.
-3. Run QCA Net.
-    ```sh
-    % git lfs clone https://github.com/funalab/QCANet.git
-    % cd QCANet/src
-    % python qca_net.py --scaling_seg --scaling_det [--gpu gpu]
-    ```
+1. Download the QCANet repository by `git clone`.
+2. Download learned model.
+3. Change directory to `QCANet/src`.
+4. Run QCA Net.
+    - On Linux:
+
+        ```sh
+        % git clone https://github.com/funalab/QCANet.git
+        % wget -P QCANet/models/p128 https://fun.bio.keio.ac.jp/software/QCANet/learned_nsn.npz
+        % wget -P QCANet/models/p128 https://fun.bio.keio.ac.jp/software/QCANet/learned_ndn.npz
+        % cd QCANet/src
+        % python qca_net.py --scaling_seg --scaling_det [--gpu gpu]
+        ```
+
+    - On macOS:
+
+        ```sh
+        % git clone https://github.com/funalab/QCANet.git
+        % curl -o QCANet/models/p128/learned_nsn.npz https://fun.bio.keio.ac.jp/software/QCANet/learned_nsn.npz
+        % curl -o QCANet/models/p128/learned_ndn.npz https://fun.bio.keio.ac.jp/software/QCANet/learned_ndn.npz
+        % cd QCANet/src
+        % python qca_net.py --scaling_seg --scaling_det [--gpu gpu]
+        ```
+
 
     The processing time of above example will be about 20 sec on GPU (NVIDIA Tesla K40).
     In this script, the input images are hard coded to be `images/example_input/16cell-image.tif`, and
     the expected output of this segmentation is stored in `images/example_output/ws_16cell-stage.tif`.
-    You can visualize both input and output images with 3D viewer plugin [[2]](#ref2) of Fiji (screenshot is shown below).
+    You can visualize both input and output images with 3D viewer plugin [[1]](#ref1) of Fiji (screenshot is shown below).
 
     ![quick_start](raw/quick_start.png)
 
@@ -59,57 +72,76 @@ The left hand side of the image(movie) is the early-stage mouse embryo, whose ce
 
     Extracted quantitative criteria from the segmentation image will be exported to `criteria.csv`.
 
-## How to train and run QCA Net with your data
+## How to train and run QCANet with your data
 
 1. At first, prepare the dataset following the directory structure as follows:
 
     ```
     your_dataset/
-           +-- 2_cell_stage/
-           |           +-- image.tif           (3D fluorescence microscopic image)
-           |           +-- segmentation_gt.tif (the ground truth of segmentation)
-           |           +-- detection_gt.tif    (the ground truth of detection)
-           +-- 4_cell_stage/
-           |           +-- image.tif
-           |           +-- segmentation_gt.tif
-           |           +-- detection_gt.tif
+           +-- images_raw/  (3D fluorescence microscopic image)
+           |           +-- image1.tif
+           |           +-- image2.tif
+           |           +-- image3.tif
+           +-- images_nsn/  (the ground truth of segmentation)
+           |           +-- image1.tif
+           |           +-- image2.tif
+           |           +-- image3.tif
+           +-- images_ndn/  (the ground truth of detection)
+           |           +-- image1.tif
+           |           +-- image2.tif
+           |           +-- image3.tif
     ```
+    Note: The pair of image and ground truth must be the same name.
+
 
 2. Train NSN & NDN with the above-prepared dataset.
 
     Train NSN:
     ```sh
-    % python train_nsn.py -i your_dataset/ [optional arguments]
+    % python train.py --conf_file confs/your_train_nsn.cfg
     ```
 
     Train NDN:
     ```sh
-    % python train_ndn.py -i your_dataset/ [optional arguments]
+    % python train.py --conf_file confs/your_train_ndn.cfg
     ```
 
-    Accepted options in `train_nsn.py` and `train_ndn.py` are described as follows.
-    The list of options will be displayed by adding `-h` option to the script.
+    Prepare the config file describing detailed parameters for training.
 
     ```
-    --indir [INDIR], -i [INDIR]                  : Specify input files directory for learning data.
-    --outdir [OUTDIR], -o [OUTDIR]               : Specify output files directory where segmentation images and model file will be stored.
-    --gpu GPU, -g GPU                            : Specify GPU ID (negative value indicates CPU).
-    --patchsize PATCHSIZE, -p PATCHSIZE          : Specify one side voxel size of ROI.
-    --paddingsize PADDINGSIZE                    : Specify image size after padding.
-    --epoch EPOCH, -e EPOCH                      : Specify the number of sweeps over the dataset to train.
-    --resolution_x RESOLUTION_X, -x RESOLUTION_X : Specify microscope resolution of x-axis (default=1.0).
-    --resolution_y RESOLUTION_Y, -y RESOLUTION_Y : Specify microscope resolution of y-axis (default=1.0).
-    --resolution_z RESOLUTION_Z, -z RESOLUTION_Z : Specify microscope resolution of z-axis (default=2.18).
-    --batchsize BATCHSIZE, -b BATCHSIZE          : Specify minibatch size.
-    --crossvalidation FOLD, -c FOLD              : Specify k-fold cross-validation.
-    --normalization, -n                          : Will use mean normalization method.
-    --augmentation, -a                           : Will do data augmentation (flip).
-    --classweight, -w                            : Will use Softmax_Corss_Entropy.
-    --scaling, -s                                : WIll do image-wise scaling.
-    --opt_method [{Adam,SGD}]                    : Specify optimizer (Adam or SGD).
+    [Dataset]
+    root_path                                   : Specify root directory path for training data.
+    split_list_train                            : Specify the path of the file in which the image file name used for training is enumerated
+    split_list_validation                       : Specify the path of the file in which the image file name used for validation is enumerated
+    input_format                                : Specify the file format of the dataset (tif, png, jpg, npz)
+    resolution                                  : Specify microscope resolution of x-, y-, and z-axis. (defalt=1.0:1.0:2.18)
+
+    [Model]
+    model                                       : Specify model name {"NSN", "NDN"}
+    ndim                                        : Specify dimensions of input / convolution kernel
+    lossfun                                     : Specify loss function
+    init_model                                  : Initialize the segmentor from given file
+    ch_in                                       : Specify number of channels for input (image)
+    ch_base                                     : Specify number of base channels (to control total memory and segmentor performance)
+    ch_out                                      : Specify number of channels for output (label)
+
+    [Runtime]
+    save_dir                                    : Specify output files directory where segmentation images and model file will be stored.
+    batchsize                                   : Specify minibatch size.
+    epoch                                       : Specify the number of sweeps over the dataset to train.
+    optimizer                                   : Specify optimizer (Adam or SGD).
+    init_lr                                     : Specify initial learning rate ("alpha" in case of Adam)
+    weight_decay                                : Specify weight decay for optimizer scheduling
+    gpu                                         : Specify GPU ID (negative value indicates CPU).
+    patch_size                                  : Specify one side voxel size of ROI.
+    padding_size                                : Specify image size after padding.
+    normalization                               : Will use mean normalization method.
+    augmentation                                : Will do data augmentation (flip & random crop).
+    class_weight                                : Will use Softmax_Corss_Entropy.
+    scaling                                     : WIll do image-wise scaling.
     ```
 
-3. Run QCA Net with the above-prepared dataset.
+3. Run QCANet with the above-prepared dataset.
 
     Prepare a directory which stores images that were not used for learning(ex. `validation/`) and
     perform segmentation and detection with `qca_net.py` to the images in this directory.
@@ -139,5 +171,4 @@ The development of this algorithm was funded by a JSPS KAKENHI Grant (Number 16H
 
 # References
 
-<a name="ref1"></a> [[1] Cicek, O., Abdulkadir,A.,Lienkamp,S.S.,Brox,T.&Ronneberger,O.3du-net:learning dense volumetric segmentation from sparse annotation. In International Conference on Medical Image Computing and Computer-Assisted Intervention, 424–432, Springer (2016).](https://link.springer.com/chapter/10.1007/978-3-319-46723-8_49)  
-<a name="ref2"></a> [[2] Schmid, Benjamin, et al. "A high-level 3D visualization API for Java and ImageJ." BMC bioinformatics 11.1 274 (2010).](https://bmcbioinformatics.biomedcentral.com/articles/10.1186/1471-2105-11-274)
+<a name="ref1"></a> [[1] Schmid, Benjamin, et al. "A high-level 3D visualization API for Java and ImageJ." BMC bioinformatics 11.1 274 (2010).](https://bmcbioinformatics.biomedcentral.com/articles/10.1186/1471-2105-11-274)
