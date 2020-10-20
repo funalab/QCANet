@@ -1,7 +1,7 @@
 # QCA Net: Quantitative Criterion Acquisition Network
 
-This is the code for [Convolutional Neural Network-Based Instance Segmentation Algorithm to Acquire Quantitative Criteria of Early Mouse Development](https://doi.org/10.1101/324186).
-This project is carried out in cooperation with [Funahashi lab at Keio University](https://fun.bio.keio.ac.jp/) and three labs: Hiroi lab at Sanyo-onoda City University, [Kobayashi lab at the University of Tokyo](http://research.crmind.net/), and Yamagata lab at Kindai University.
+This is the code for [3D convolutional neural networks-based segmentation to acquire quantitative criteria of the nucleus during mouse embryogenesis](https://doi.org/10.1038/s41540-020-00152-8).
+This project is carried out in cooperation with [Funahashi Lab. at Keio University](https://fun.bio.keio.ac.jp/) and three labs: Hiroi Lab. at Sanyo-onoda City University, [Kobayashi Lab. at the University of Tokyo](http://research.crmind.net/), and Yamagata Lab. at Kindai University.
 
 
 ## Overview
@@ -9,7 +9,7 @@ This project is carried out in cooperation with [Funahashi lab at Keio Universit
 Quantitative Criterion Acquisition Network (QCA Net) performs instance segmentation of 3D fluorescence microscopic images.
 QCA Net consists of Nuclear Segmentation Network (NSN) that learned nuclear segmentation task and Nuclear Detection Network (NDN) that learned nuclear identification task.
 QCA Net performs instance segmentation of the time-series 3D fluorescence microscopic images at each time point, and the quantitative criteria for mouse development are extracted from the acquired time-series segmentation image.
-The detailed information on this program is described in our manuscript posted on [bioRxiv](https://doi.org/10.1101/324186).
+The detailed information on this code is described in our paper published on [npj Systems Biology and Applications](https://doi.org/10.1038/s41540-020-00152-8).
 
 
 ## Performance
@@ -171,9 +171,9 @@ The left hand side of the image(movie) is the early-stage mouse embryo, whose ce
 # Acknowledgement
 
 The microscopic images included in this repository is provided by Yamagata Lab., Kindai University.
-The development of this algorithm was funded by a JSPS KAKENHI Grant (Number 16H04731).
+The development of this algorithm was funded by JSPS KAKENHI Grant Numbers 16H04731 and 20H03244 to [Akira Funahashi](https://github.com/funasoul).
 
 # References
 
-<a name="ref1"></a> [[1] Cicek, O., Abdulkadir,A.,Lienkamp,S.S.,Brox,T.&Ronneberger,O.3du-net:learning dense volumetric segmentation from sparse annotation. In International Conference on Medical Image Computing and Computer-Assisted Intervention, 424–432, Springer (2016).](https://link.springer.com/chapter/10.1007/978-3-319-46723-8_49)  
+<a name="ref1"></a> [[1] Cicek, O., Abdulkadir,A.,Lienkamp,S.S.,Brox,T.&Ronneberger,O.3du-net:learning dense volumetric segmentation from sparse annotation. In International Conference on Medical Image Computing and Computer-Assisted Intervention, 424–432, Springer (2016).](https://link.springer.com/chapter/10.1007/978-3-319-46723-8_49
 <a name="ref2"></a> [[2] Schmid, Benjamin, et al. "A high-level 3D visualization API for Java and ImageJ." BMC bioinformatics 11.1 274 (2010).](https://bmcbioinformatics.biomedcentral.com/articles/10.1186/1471-2105-11-274)
