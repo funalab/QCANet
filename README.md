@@ -175,5 +175,5 @@ The development of this algorithm was funded by JSPS KAKENHI Grant Numbers 16H04
 
 # References
 
-<a name="ref1"></a> [[1] Cicek, O., Abdulkadir,A.,Lienkamp,S.S.,Brox,T.&Ronneberger,O.3du-net:learning dense volumetric segmentation from sparse annotation. In International Conference on Medical Image Computing and Computer-Assisted Intervention, 424–432, Springer (2016).](https://link.springer.com/chapter/10.1007/978-3-319-46723-8_49
+<a name="ref1"></a> [[1] Cicek, O., Abdulkadir,A.,Lienkamp,S.S.,Brox,T.&Ronneberger,O.3du-net:learning dense volumetric segmentation from sparse annotation. In International Conference on Medical Image Computing and Computer-Assisted Intervention, 424–432, Springer (2016).](https://link.springer.com/chapter/10.1007/978-3-319-46723-8_49)
 <a name="ref2"></a> [[2] Schmid, Benjamin, et al. "A high-level 3D visualization API for Java and ImageJ." BMC bioinformatics 11.1 274 (2010).](https://bmcbioinformatics.biomedcentral.com/articles/10.1186/1471-2105-11-274)
