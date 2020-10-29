@@ -54,10 +54,8 @@ class TestNSN():
         elif self.ndim == 3:
             ip_size = (int(image.shape[0] * self.resolution[2]), int(image.shape[1] * self.resolution[1]), int(image.shape[2] * self.resolution[0]))
             sh = [int(self.stride[0]/2), int(self.stride[1]/2), int(self.stride[2]/2)]
-        print('ip_size: {}'.format(ip_size))
         image = tr.resize(image, ip_size, order = 1, preserve_range = True)
         im_size_ip = image.shape
-        print('ip_size: {}'.format(im_size_ip))
         #pre_psize = int(self.patchsize - (self.stride/2))
 
         # Scaling

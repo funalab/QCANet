@@ -23,7 +23,7 @@ def main():
     starttime = time.time()
     ap = ArgumentParser(description='python extract.py')
     ap.add_argument('--indir', '-i', nargs='?', default='images/example_output', help='Specify input files directory SegmentationImages')
-    ap.add_argument('--outdir', '-o', nargs='?', default='result_extract', help='Specify output files directory for create segmentation image and save model file')
+    ap.add_argument('--outdir', '-o', nargs='?', default='results/result_extract', help='Specify output files directory for create segmentation image and save model file')
     ap.add_argument('--roi', '-r', type=int, default=0, help='Specify ROI GT')
     ap.add_argument('--labeling4', action='store_true', help='Specify Labeling Flag (Gray Scale Image)')
     ap.add_argument('--labeling8', action='store_true', help='Specify Labeling Flag (Gray Scale Image)')
