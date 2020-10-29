@@ -6,52 +6,64 @@ from chainer import cuda, Function, Variable
 from chainer import Link, Chain, ChainList
 import chainer.functions as F
 import chainer.links as L
+from src.lib.loss import softmax_dice_loss
 
 class Model_L2(Chain):
-    def __init__(self, class_weight, n_class=2, init_channel=2, kernel_size=3, pool_size=2,
-                 ap_factor=2, gpu=-1):
-        self.class_weight = class_weight
-        self.init_channel = init_channel
-        self.kernel_size = kernel_size
-        self.pool_size = pool_size
-        self.ap_factor = ap_factor
+    def __init__(
+            self,
+            ndim=3,
+            n_class=2,
+            init_channel=2,
+            kernel_size=3,
+            pool_size=2,
+            ap_factor=2,
+            gpu=-1,
+            class_weight=np.array([1, 1]).astype(np.float32),
+            loss_func='F.softmax_cross_entropy'
+        ):
         self.gpu = gpu
+        self.pool_size = pool_size
+        if gpu >= 0:
+            self.class_weight = cuda.to_gpu(np.array(class_weight).astype(np.float32))
+        else:
+            self.class_weight = np.array(class_weight).astype(np.float32)
         self.train = True
-        self.initializer = chainer.initializers.HeNormal()
+        self.loss_func = loss_func
+        initializer = chainer.initializers.HeNormal()
         super(Model_L2, self).__init__(
 
-            c0=L.ConvolutionND(3, 1, self.init_channel, self.kernel_size, 1, int(self.kernel_size/2), initialW=self.initializer, initial_bias=None),
-            c1=L.ConvolutionND(3, self.init_channel, int(self.init_channel * (self.ap_factor ** 1)), self.kernel_size, 1, int(self.kernel_size/2), initialW=self.initializer, initial_bias=None),
+            c0=L.ConvolutionND(ndim, 1, init_channel, kernel_size, 1, int(kernel_size/2), initialW=initializer, initial_bias=None),
+            c1=L.ConvolutionND(ndim, init_channel, int(init_channel * (ap_factor ** 1)), kernel_size, 1, int(kernel_size/2), initialW=initializer, initial_bias=None),
 
-            c2=L.ConvolutionND(3, int(self.init_channel * (self.ap_factor ** 1)), int(self.init_channel * (self.ap_factor ** 1)), self.kernel_size, 1, int(self.kernel_size/2), initialW=self.initializer, initial_bias=None),
-            c3=L.ConvolutionND(3, int(self.init_channel * (self.ap_factor ** 1)), int(self.init_channel * (self.ap_factor ** 2)), self.kernel_size, 1, int(self.kernel_size/2), initialW=self.initializer, initial_bias=None),
+            c2=L.ConvolutionND(ndim, int(init_channel * (ap_factor ** 1)), int(init_channel * (ap_factor ** 1)), kernel_size, 1, int(kernel_size/2), initialW=initializer, initial_bias=None),
+            c3=L.ConvolutionND(ndim, int(init_channel * (ap_factor ** 1)), int(init_channel * (ap_factor ** 2)), kernel_size, 1, int(kernel_size/2), initialW=initializer, initial_bias=None),
 
-            c4=L.ConvolutionND(3, int(self.init_channel * (self.ap_factor ** 2)), int(self.init_channel * (self.ap_factor ** 2)), self.kernel_size, 1, int(self.kernel_size/2), initialW=self.initializer, initial_bias=None),
-            c5=L.ConvolutionND(3, int(self.init_channel * (self.ap_factor ** 2)), int(self.init_channel * (self.ap_factor ** 3)), self.kernel_size, 1, int(self.kernel_size/2), initialW=self.initializer, initial_bias=None),
+            c4=L.ConvolutionND(ndim, int(init_channel * (ap_factor ** 2)), int(init_channel * (ap_factor ** 2)), kernel_size, 1, int(kernel_size/2), initialW=initializer, initial_bias=None),
+            c5=L.ConvolutionND(ndim, int(init_channel * (ap_factor ** 2)), int(init_channel * (ap_factor ** 3)), kernel_size, 1, int(kernel_size/2), initialW=initializer, initial_bias=None),
 
-            dc0=L.DeconvolutionND(3, int(self.init_channel * (self.ap_factor ** 3)), int(self.init_channel * (self.ap_factor ** 3)), self.pool_size, self.pool_size, 0, initialW=self.initializer, initial_bias=None),
-            dc1=L.ConvolutionND(3, int(self.init_channel * (self.ap_factor ** 2) + self.init_channel * (self.ap_factor ** 3)), int(self.init_channel * (self.ap_factor ** 2)), self.kernel_size, 1, int(self.kernel_size/2), initialW=self.initializer, initial_bias=None),
-            dc2=L.ConvolutionND(3, int(self.init_channel * (self.ap_factor ** 2)), int(self.init_channel * (self.ap_factor ** 2)), self.kernel_size, 1, int(self.kernel_size/2), initialW=self.initializer, initial_bias=None),
+            dc0=L.DeconvolutionND(ndim, int(init_channel * (ap_factor ** 3)), int(init_channel * (ap_factor ** 3)), self.pool_size, self.pool_size, 0, initialW=initializer, initial_bias=None),
+            dc1=L.ConvolutionND(ndim, int(init_channel * (ap_factor ** 2) + init_channel * (ap_factor ** 3)), int(init_channel * (ap_factor ** 2)), kernel_size, 1, int(kernel_size/2), initialW=initializer, initial_bias=None),
+            dc2=L.ConvolutionND(ndim, int(init_channel * (ap_factor ** 2)), int(init_channel * (ap_factor ** 2)), kernel_size, 1, int(kernel_size/2), initialW=initializer, initial_bias=None),
 
-            dc3=L.DeconvolutionND(3, int(self.init_channel * (self.ap_factor ** 2)), int(self.init_channel * (self.ap_factor ** 2)), self.pool_size, self.pool_size, 0, initialW=self.initializer, initial_bias=None),
-            dc4=L.ConvolutionND(3, int(self.init_channel * (self.ap_factor ** 1) + self.init_channel * (self.ap_factor ** 2)), int(self.init_channel * (self.ap_factor ** 1)), self.kernel_size, 1, int(self.kernel_size/2), initialW=self.initializer, initial_bias=None),
-            dc5=L.ConvolutionND(3, int(self.init_channel * (self.ap_factor ** 1)), int(self.init_channel * (self.ap_factor ** 1)), self.kernel_size, 1, int(self.kernel_size/2), initialW=self.initializer, initial_bias=None),
+            dc3=L.DeconvolutionND(ndim, int(init_channel * (ap_factor ** 2)), int(init_channel * (ap_factor ** 2)), self.pool_size, self.pool_size, 0, initialW=initializer, initial_bias=None),
+            dc4=L.ConvolutionND(ndim, int(init_channel * (ap_factor ** 1) + init_channel * (ap_factor ** 2)), int(init_channel * (ap_factor ** 1)), kernel_size, 1, int(kernel_size/2), initialW=initializer, initial_bias=None),
+            dc5=L.ConvolutionND(ndim, int(init_channel * (ap_factor ** 1)), int(init_channel * (ap_factor ** 1)), kernel_size, 1, int(kernel_size/2), initialW=initializer, initial_bias=None),
 
-            dc6=L.ConvolutionND(3, int(self.init_channel * (self.ap_factor ** 1)), n_class, 1, 1, initialW=self.initializer, initial_bias=None),
+            dc6=L.ConvolutionND(ndim, int(init_channel * (ap_factor ** 1)), n_class, 1, 1, initialW=initializer, initial_bias=None),
 
-            bnc0=L.BatchNormalization(self.init_channel),
-            bnc1=L.BatchNormalization(int(self.init_channel * (self.ap_factor ** 1))),
+            bnc0=L.BatchNormalization(init_channel),
+            bnc1=L.BatchNormalization(int(init_channel * (ap_factor ** 1))),
 
-            bnc2=L.BatchNormalization(int(self.init_channel * (self.ap_factor ** 1))),
-            bnc3=L.BatchNormalization(int(self.init_channel * (self.ap_factor ** 2))),
+            bnc2=L.BatchNormalization(int(init_channel * (ap_factor ** 1))),
+            bnc3=L.BatchNormalization(int(init_channel * (ap_factor ** 2))),
 
-            bnc4=L.BatchNormalization(int(self.init_channel * (self.ap_factor ** 2))),
-            bnc5=L.BatchNormalization(int(self.init_channel * (self.ap_factor ** 3))),
+            bnc4=L.BatchNormalization(int(init_channel * (ap_factor ** 2))),
+            bnc5=L.BatchNormalization(int(init_channel * (ap_factor ** 3))),
 
-            bndc1=L.BatchNormalization(int(self.init_channel * (self.ap_factor ** 2))),
-            bndc2=L.BatchNormalization(int(self.init_channel * (self.ap_factor ** 2))),
-            bndc4=L.BatchNormalization(int(self.init_channel * (self.ap_factor ** 1))),
-            bndc5=L.BatchNormalization(int(self.init_channel * (self.ap_factor ** 1)))
+            bndc1=L.BatchNormalization(int(init_channel * (ap_factor ** 2))),
+            bndc2=L.BatchNormalization(int(init_channel * (ap_factor ** 2))),
+            bndc4=L.BatchNormalization(int(init_channel * (ap_factor ** 1))),
+            bndc5=L.BatchNormalization(int(init_channel * (ap_factor ** 1)))
         )
 
     def _calc(self, x):
@@ -87,69 +99,81 @@ class Model_L2(Chain):
             del h
             return pred.data
         else:
-            loss = F.softmax_cross_entropy(h, t, class_weight=self.class_weight)
+            #loss = eval(self.loss_func)(h, t, class_weight=self.class_weight)
+            loss = eval(self.loss_func)(h, t)
             pred = F.softmax(h)
             del h
             return loss, pred.data
 
 
 class Model_L3(Chain):
-    def __init__(self, class_weight, n_class=2, init_channel=2, kernel_size=3, pool_size=2,
-                 ap_factor=2, gpu=-1):
-        self.class_weight = class_weight
-        self.init_channel = init_channel
-        self.kernel_size = kernel_size
-        self.pool_size = pool_size
-        self.ap_factor = ap_factor
+    def __init__(
+            self,
+            ndim=3,
+            n_class=2,
+            init_channel=2,
+            kernel_size=3,
+            pool_size=2,
+            ap_factor=2,
+            gpu=-1,
+            class_weight=np.array([1, 1]).astype(np.float32),
+            loss_func='F.softmax_cross_entropy'
+        ):
         self.gpu = gpu
+        self.pool_size = pool_size
+        if gpu >= 0:
+            self.class_weight = cuda.to_gpu(np.array(class_weight).astype(np.float32))
+        else:
+            self.class_weight = np.array(class_weight).astype(np.float32)
         self.train = True
-        self.initializer = chainer.initializers.HeNormal()
+        self.loss_func = loss_func
+        initializer = chainer.initializers.HeNormal()
         super(Model_L3, self).__init__(
 
-            c0=L.ConvolutionND(3, 1, self.init_channel, self.kernel_size, 1, int(self.kernel_size/2), initialW=self.initializer, initial_bias=None),
-            c1=L.ConvolutionND(3, self.init_channel, int(self.init_channel * (self.ap_factor ** 1)), self.kernel_size, 1, int(self.kernel_size/2), initialW=self.initializer, initial_bias=None),
+            c0=L.ConvolutionND(ndim, 1, init_channel, kernel_size, 1, int(kernel_size/2), initialW=initializer, initial_bias=None),
+            c1=L.ConvolutionND(ndim, init_channel, int(init_channel * (ap_factor ** 1)), kernel_size, 1, int(kernel_size/2), initialW=initializer, initial_bias=None),
 
-            c2=L.ConvolutionND(3, int(self.init_channel * (self.ap_factor ** 1)), int(self.init_channel * (self.ap_factor ** 1)), self.kernel_size, 1, int(self.kernel_size/2), initialW=self.initializer, initial_bias=None),
-            c3=L.ConvolutionND(3, int(self.init_channel * (self.ap_factor ** 1)), int(self.init_channel * (self.ap_factor ** 2)), self.kernel_size, 1, int(self.kernel_size/2), initialW=self.initializer, initial_bias=None),
+            c2=L.ConvolutionND(ndim, int(init_channel * (ap_factor ** 1)), int(init_channel * (ap_factor ** 1)), kernel_size, 1, int(kernel_size/2), initialW=initializer, initial_bias=None),
+            c3=L.ConvolutionND(ndim, int(init_channel * (ap_factor ** 1)), int(init_channel * (ap_factor ** 2)), kernel_size, 1, int(kernel_size/2), initialW=initializer, initial_bias=None),
 
-            c4=L.ConvolutionND(3, int(self.init_channel * (self.ap_factor ** 2)), int(self.init_channel * (self.ap_factor ** 2)), self.kernel_size, 1, int(self.kernel_size/2), initialW=self.initializer, initial_bias=None),
-            c5=L.ConvolutionND(3, int(self.init_channel * (self.ap_factor ** 2)), int(self.init_channel * (self.ap_factor ** 3)), self.kernel_size, 1, int(self.kernel_size/2), initialW=self.initializer, initial_bias=None),
+            c4=L.ConvolutionND(ndim, int(init_channel * (ap_factor ** 2)), int(init_channel * (ap_factor ** 2)), kernel_size, 1, int(kernel_size/2), initialW=initializer, initial_bias=None),
+            c5=L.ConvolutionND(ndim, int(init_channel * (ap_factor ** 2)), int(init_channel * (ap_factor ** 3)), kernel_size, 1, int(kernel_size/2), initialW=initializer, initial_bias=None),
 
-            c6=L.ConvolutionND(3, int(self.init_channel * (self.ap_factor ** 3)), int(self.init_channel * (self.ap_factor ** 3)), self.kernel_size, 1, int(self.kernel_size/2), initialW=self.initializer, initial_bias=None),
-            c7=L.ConvolutionND(3, int(self.init_channel * (self.ap_factor ** 3)), int(self.init_channel * (self.ap_factor ** 4)), self.kernel_size, 1, int(self.kernel_size/2), initialW=self.initializer, initial_bias=None),
+            c6=L.ConvolutionND(ndim, int(init_channel * (ap_factor ** 3)), int(init_channel * (ap_factor ** 3)), kernel_size, 1, int(kernel_size/2), initialW=initializer, initial_bias=None),
+            c7=L.ConvolutionND(ndim, int(init_channel * (ap_factor ** 3)), int(init_channel * (ap_factor ** 4)), kernel_size, 1, int(kernel_size/2), initialW=initializer, initial_bias=None),
 
-            dc0=L.DeconvolutionND(3, int(self.init_channel * (self.ap_factor ** 4)), int(self.init_channel * (self.ap_factor ** 4)), self.pool_size, self.pool_size, 0, initialW=self.initializer, initial_bias=None),
-            dc1=L.ConvolutionND(3, int(self.init_channel * (self.ap_factor ** 3) + self.init_channel * (self.ap_factor ** 4)), int(self.init_channel * (self.ap_factor ** 3)), self.kernel_size, 1, int(self.kernel_size/2), initialW=self.initializer, initial_bias=None),
-            dc2=L.ConvolutionND(3, int(self.init_channel * (self.ap_factor ** 3)), int(self.init_channel * (self.ap_factor ** 3)), self.kernel_size, 1, int(self.kernel_size/2), initialW=self.initializer, initial_bias=None),
+            dc0=L.DeconvolutionND(ndim, int(init_channel * (ap_factor ** 4)), int(init_channel * (ap_factor ** 4)), self.pool_size, self.pool_size, 0, initialW=initializer, initial_bias=None),
+            dc1=L.ConvolutionND(ndim, int(init_channel * (ap_factor ** 3) + init_channel * (ap_factor ** 4)), int(init_channel * (ap_factor ** 3)), kernel_size, 1, int(kernel_size/2), initialW=initializer, initial_bias=None),
+            dc2=L.ConvolutionND(ndim, int(init_channel * (ap_factor ** 3)), int(init_channel * (ap_factor ** 3)), kernel_size, 1, int(kernel_size/2), initialW=initializer, initial_bias=None),
 
-            dc3=L.DeconvolutionND(3, int(self.init_channel * (self.ap_factor ** 3)), int(self.init_channel * (self.ap_factor ** 3)), self.pool_size, self.pool_size, 0, initialW=self.initializer, initial_bias=None),
-            dc4=L.ConvolutionND(3, int(self.init_channel * (self.ap_factor ** 2) + self.init_channel * (self.ap_factor ** 3)), int(self.init_channel * (self.ap_factor ** 2)), self.kernel_size, 1, int(self.kernel_size/2), initialW=self.initializer, initial_bias=None),
-            dc5=L.ConvolutionND(3, int(self.init_channel * (self.ap_factor ** 2)), int(self.init_channel * (self.ap_factor ** 2)), self.kernel_size, 1, int(self.kernel_size/2), initialW=self.initializer, initial_bias=None),
+            dc3=L.DeconvolutionND(ndim, int(init_channel * (ap_factor ** 3)), int(init_channel * (ap_factor ** 3)), self.pool_size, self.pool_size, 0, initialW=initializer, initial_bias=None),
+            dc4=L.ConvolutionND(ndim, int(init_channel * (ap_factor ** 2) + init_channel * (ap_factor ** 3)), int(init_channel * (ap_factor ** 2)), kernel_size, 1, int(kernel_size/2), initialW=initializer, initial_bias=None),
+            dc5=L.ConvolutionND(ndim, int(init_channel * (ap_factor ** 2)), int(init_channel * (ap_factor ** 2)), kernel_size, 1, int(kernel_size/2), initialW=initializer, initial_bias=None),
 
-            dc6=L.DeconvolutionND(3, int(self.init_channel * (self.ap_factor ** 2)), int(self.init_channel * (self.ap_factor ** 2)), self.pool_size, self.pool_size, 0, initialW=self.initializer, initial_bias=None),
-            dc7=L.ConvolutionND(3, int(self.init_channel * (self.ap_factor ** 1) + self.init_channel * (self.ap_factor ** 2)), int(self.init_channel * (self.ap_factor ** 1)), self.kernel_size, 1, int(self.kernel_size/2), initialW=self.initializer, initial_bias=None),
-            dc8=L.ConvolutionND(3, int(self.init_channel * (self.ap_factor ** 1)), int(self.init_channel * (self.ap_factor ** 1)), self.kernel_size, 1, int(self.kernel_size/2), initialW=self.initializer, initial_bias=None),
+            dc6=L.DeconvolutionND(ndim, int(init_channel * (ap_factor ** 2)), int(init_channel * (ap_factor ** 2)), self.pool_size, self.pool_size, 0, initialW=initializer, initial_bias=None),
+            dc7=L.ConvolutionND(ndim, int(init_channel * (ap_factor ** 1) + init_channel * (ap_factor ** 2)), int(init_channel * (ap_factor ** 1)), kernel_size, 1, int(kernel_size/2), initialW=initializer, initial_bias=None),
+            dc8=L.ConvolutionND(ndim, int(init_channel * (ap_factor ** 1)), int(init_channel * (ap_factor ** 1)), kernel_size, 1, int(kernel_size/2), initialW=initializer, initial_bias=None),
 
-            dc9=L.ConvolutionND(3, int(self.init_channel * (self.ap_factor ** 1)), n_class, 1, 1, initialW=self.initializer, initial_bias=None),
+            dc9=L.ConvolutionND(ndim, int(init_channel * (ap_factor ** 1)), n_class, 1, 1, initialW=initializer, initial_bias=None),
 
-            bnc0=L.BatchNormalization(self.init_channel),
-            bnc1=L.BatchNormalization(int(self.init_channel * (self.ap_factor ** 1))),
+            bnc0=L.BatchNormalization(init_channel),
+            bnc1=L.BatchNormalization(int(init_channel * (ap_factor ** 1))),
 
-            bnc2=L.BatchNormalization(int(self.init_channel * (self.ap_factor ** 1))),
-            bnc3=L.BatchNormalization(int(self.init_channel * (self.ap_factor ** 2))),
+            bnc2=L.BatchNormalization(int(init_channel * (ap_factor ** 1))),
+            bnc3=L.BatchNormalization(int(init_channel * (ap_factor ** 2))),
 
-            bnc4=L.BatchNormalization(int(self.init_channel * (self.ap_factor ** 2))),
-            bnc5=L.BatchNormalization(int(self.init_channel * (self.ap_factor ** 3))),
+            bnc4=L.BatchNormalization(int(init_channel * (ap_factor ** 2))),
+            bnc5=L.BatchNormalization(int(init_channel * (ap_factor ** 3))),
 
-            bnc6=L.BatchNormalization(int(self.init_channel * (self.ap_factor ** 3))),
-            bnc7=L.BatchNormalization(int(self.init_channel * (self.ap_factor ** 4))),
+            bnc6=L.BatchNormalization(int(init_channel * (ap_factor ** 3))),
+            bnc7=L.BatchNormalization(int(init_channel * (ap_factor ** 4))),
 
-            bndc1=L.BatchNormalization(int(self.init_channel * (self.ap_factor ** 3))),
-            bndc2=L.BatchNormalization(int(self.init_channel * (self.ap_factor ** 3))),
-            bndc4=L.BatchNormalization(int(self.init_channel * (self.ap_factor ** 2))),
-            bndc5=L.BatchNormalization(int(self.init_channel * (self.ap_factor ** 2))),
-            bndc7=L.BatchNormalization(int(self.init_channel * (self.ap_factor ** 1))),
-            bndc8=L.BatchNormalization(int(self.init_channel * (self.ap_factor ** 1)))
+            bndc1=L.BatchNormalization(int(init_channel * (ap_factor ** 3))),
+            bndc2=L.BatchNormalization(int(init_channel * (ap_factor ** 3))),
+            bndc4=L.BatchNormalization(int(init_channel * (ap_factor ** 2))),
+            bndc5=L.BatchNormalization(int(init_channel * (ap_factor ** 2))),
+            bndc7=L.BatchNormalization(int(init_channel * (ap_factor ** 1))),
+            bndc8=L.BatchNormalization(int(init_channel * (ap_factor ** 1)))
         )
 
     def _calc(self, x):
@@ -194,80 +218,91 @@ class Model_L3(Chain):
             del h
             return pred.data
         else:
-            loss = F.softmax_cross_entropy(h, t, class_weight=self.class_weight)
+            #loss = eval(self.loss_func)(h, t, class_weight=self.class_weight)
+            loss = eval(self.loss_func)(h, t)
             pred = F.softmax(h)
             del h
             return loss, pred.data
 
-        
+
 class Model_L4(Chain):
-    def __init__(self, class_weight, n_class=2, init_channel=2, kernel_size=3, pool_size=2,
-                 ap_factor=2, gpu=-1):
-        self.class_weight = class_weight
-        self.init_channel = init_channel
-        self.kernel_size = kernel_size
-        self.pool_size = pool_size
-        self.ap_factor = ap_factor
+    def __init__(
+            self,
+            ndim=3,
+            n_class=2,
+            init_channel=2,
+            kernel_size=3,
+            pool_size=2,
+            ap_factor=2,
+            gpu=-1,
+            class_weight=np.array([1, 1]).astype(np.float32),
+            loss_func='F.softmax_cross_entropy'
+        ):
         self.gpu = gpu
+        self.pool_size = pool_size
+        if gpu >= 0:
+            self.class_weight = cuda.to_gpu(np.array(class_weight).astype(np.float32))
+        else:
+            self.class_weight = np.array(class_weight).astype(np.float32)
         self.train = True
-        self.initializer = chainer.initializers.HeNormal()
+        self.loss_func = loss_func
+        initializer = chainer.initializers.HeNormal()
         super(Model_L4, self).__init__(
 
-            c0=L.ConvolutionND(3, 1, self.init_channel, self.kernel_size, 1, int(self.kernel_size/2), initialW=self.initializer, initial_bias=None),
-            c1=L.ConvolutionND(3, self.init_channel, int(self.init_channel * (self.ap_factor ** 1)), self.kernel_size, 1, int(self.kernel_size/2), initialW=self.initializer, initial_bias=None),
-            c2=L.ConvolutionND(3, int(self.init_channel * (self.ap_factor ** 1)), int(self.init_channel * (self.ap_factor ** 1)), self.kernel_size, 1, int(self.kernel_size/2), initialW=self.initializer, initial_bias=None),
-            c3=L.ConvolutionND(3, int(self.init_channel * (self.ap_factor ** 1)), int(self.init_channel * (self.ap_factor ** 2)), self.kernel_size, 1, int(self.kernel_size/2), initialW=self.initializer, initial_bias=None),
+            c0=L.ConvolutionND(ndim, 1, init_channel, kernel_size, 1, int(kernel_size/2), initialW=initializer, initial_bias=None),
+            c1=L.ConvolutionND(ndim, init_channel, int(init_channel * (ap_factor ** 1)), kernel_size, 1, int(kernel_size/2), initialW=initializer, initial_bias=None),
+            c2=L.ConvolutionND(ndim, int(init_channel * (ap_factor ** 1)), int(init_channel * (ap_factor ** 1)), kernel_size, 1, int(kernel_size/2), initialW=initializer, initial_bias=None),
+            c3=L.ConvolutionND(ndim, int(init_channel * (ap_factor ** 1)), int(init_channel * (ap_factor ** 2)), kernel_size, 1, int(kernel_size/2), initialW=initializer, initial_bias=None),
 
-            c4=L.ConvolutionND(3, int(self.init_channel * (self.ap_factor ** 2)), int(self.init_channel * (self.ap_factor ** 2)), self.kernel_size, 1, int(self.kernel_size/2), initialW=self.initializer, initial_bias=None),
-            c5=L.ConvolutionND(3, int(self.init_channel * (self.ap_factor ** 2)), int(self.init_channel * (self.ap_factor ** 3)), self.kernel_size, 1, int(self.kernel_size/2), initialW=self.initializer, initial_bias=None),
+            c4=L.ConvolutionND(ndim, int(init_channel * (ap_factor ** 2)), int(init_channel * (ap_factor ** 2)), kernel_size, 1, int(kernel_size/2), initialW=initializer, initial_bias=None),
+            c5=L.ConvolutionND(ndim, int(init_channel * (ap_factor ** 2)), int(init_channel * (ap_factor ** 3)), kernel_size, 1, int(kernel_size/2), initialW=initializer, initial_bias=None),
 
-            c6=L.ConvolutionND(3, int(self.init_channel * (self.ap_factor ** 3)), int(self.init_channel * (self.ap_factor ** 3)), self.kernel_size, 1, int(self.kernel_size/2), initialW=self.initializer, initial_bias=None),
-            c7=L.ConvolutionND(3, int(self.init_channel * (self.ap_factor ** 3)), int(self.init_channel * (self.ap_factor ** 4)), self.kernel_size, 1, int(self.kernel_size/2), initialW=self.initializer, initial_bias=None),
+            c6=L.ConvolutionND(ndim, int(init_channel * (ap_factor ** 3)), int(init_channel * (ap_factor ** 3)), kernel_size, 1, int(kernel_size/2), initialW=initializer, initial_bias=None),
+            c7=L.ConvolutionND(ndim, int(init_channel * (ap_factor ** 3)), int(init_channel * (ap_factor ** 4)), kernel_size, 1, int(kernel_size/2), initialW=initializer, initial_bias=None),
 
-            c8=L.ConvolutionND(3, int(self.init_channel * (self.ap_factor ** 4)), int(self.init_channel * (self.ap_factor ** 4)), self.kernel_size, 1, int(self.kernel_size/2), initialW=self.initializer, initial_bias=None),
-            c9=L.ConvolutionND(3, int(self.init_channel * (self.ap_factor ** 4)), int(self.init_channel * (self.ap_factor ** 5)), self.kernel_size, 1, int(self.kernel_size/2), initialW=self.initializer, initial_bias=None),
+            c8=L.ConvolutionND(ndim, int(init_channel * (ap_factor ** 4)), int(init_channel * (ap_factor ** 4)), kernel_size, 1, int(kernel_size/2), initialW=initializer, initial_bias=None),
+            c9=L.ConvolutionND(ndim, int(init_channel * (ap_factor ** 4)), int(init_channel * (ap_factor ** 5)), kernel_size, 1, int(kernel_size/2), initialW=initializer, initial_bias=None),
 
-            dc0=L.DeconvolutionND(3, int(self.init_channel * (self.ap_factor ** 5)), int(self.init_channel * (self.ap_factor ** 5)), self.pool_size, self.pool_size, 0, initialW=self.initializer, initial_bias=None),
-            dc1=L.ConvolutionND(3, int(self.init_channel * (self.ap_factor ** 4) + self.init_channel * (self.ap_factor ** 5)), int(self.init_channel * (self.ap_factor ** 4)), self.kernel_size, 1, int(self.kernel_size/2), initialW=self.initializer, initial_bias=None),
-            dc2=L.ConvolutionND(3, int(self.init_channel * (self.ap_factor ** 4)), int(self.init_channel * (self.ap_factor ** 4)), self.kernel_size, 1, int(self.kernel_size/2), initialW=self.initializer, initial_bias=None),
+            dc0=L.DeconvolutionND(ndim, int(init_channel * (ap_factor ** 5)), int(init_channel * (ap_factor ** 5)), self.pool_size, self.pool_size, 0, initialW=initializer, initial_bias=None),
+            dc1=L.ConvolutionND(ndim, int(init_channel * (ap_factor ** 4) + init_channel * (ap_factor ** 5)), int(init_channel * (ap_factor ** 4)), kernel_size, 1, int(kernel_size/2), initialW=initializer, initial_bias=None),
+            dc2=L.ConvolutionND(ndim, int(init_channel * (ap_factor ** 4)), int(init_channel * (ap_factor ** 4)), kernel_size, 1, int(kernel_size/2), initialW=initializer, initial_bias=None),
 
-            dc3=L.DeconvolutionND(3, int(self.init_channel * (self.ap_factor ** 4)), int(self.init_channel * (self.ap_factor ** 4)), self.pool_size, self.pool_size, 0, initialW=self.initializer, initial_bias=None),
-            dc4=L.ConvolutionND(3, int(self.init_channel * (self.ap_factor ** 3) + self.init_channel * (self.ap_factor ** 4)), int(self.init_channel * (self.ap_factor ** 3)), self.kernel_size, 1, int(self.kernel_size/2), initialW=self.initializer, initial_bias=None),
-            dc5=L.ConvolutionND(3, int(self.init_channel * (self.ap_factor ** 3)), int(self.init_channel * (self.ap_factor ** 3)), self.kernel_size, 1, int(self.kernel_size/2), initialW=self.initializer, initial_bias=None),
+            dc3=L.DeconvolutionND(ndim, int(init_channel * (ap_factor ** 4)), int(init_channel * (ap_factor ** 4)), self.pool_size, self.pool_size, 0, initialW=initializer, initial_bias=None),
+            dc4=L.ConvolutionND(ndim, int(init_channel * (ap_factor ** 3) + init_channel * (ap_factor ** 4)), int(init_channel * (ap_factor ** 3)), kernel_size, 1, int(kernel_size/2), initialW=initializer, initial_bias=None),
+            dc5=L.ConvolutionND(ndim, int(init_channel * (ap_factor ** 3)), int(init_channel * (ap_factor ** 3)), kernel_size, 1, int(kernel_size/2), initialW=initializer, initial_bias=None),
 
-            dc6=L.DeconvolutionND(3, int(self.init_channel * (self.ap_factor ** 3)), int(self.init_channel * (self.ap_factor ** 3)), self.pool_size, self.pool_size, 0, initialW=self.initializer, initial_bias=None),
-            dc7=L.ConvolutionND(3, int(self.init_channel * (self.ap_factor ** 2) + self.init_channel * (self.ap_factor ** 3)), int(self.init_channel * (self.ap_factor ** 2)), self.kernel_size, 1, int(self.kernel_size/2), initialW=self.initializer, initial_bias=None),
-            dc8=L.ConvolutionND(3, int(self.init_channel * (self.ap_factor ** 2)), int(self.init_channel * (self.ap_factor ** 2)), self.kernel_size, 1, int(self.kernel_size/2), initialW=self.initializer, initial_bias=None),
+            dc6=L.DeconvolutionND(ndim, int(init_channel * (ap_factor ** 3)), int(init_channel * (ap_factor ** 3)), self.pool_size, self.pool_size, 0, initialW=initializer, initial_bias=None),
+            dc7=L.ConvolutionND(ndim, int(init_channel * (ap_factor ** 2) + init_channel * (ap_factor ** 3)), int(init_channel * (ap_factor ** 2)), kernel_size, 1, int(kernel_size/2), initialW=initializer, initial_bias=None),
+            dc8=L.ConvolutionND(ndim, int(init_channel * (ap_factor ** 2)), int(init_channel * (ap_factor ** 2)), kernel_size, 1, int(kernel_size/2), initialW=initializer, initial_bias=None),
 
-            dc9=L.DeconvolutionND(3, int(self.init_channel * (self.ap_factor ** 2)), int(self.init_channel * (self.ap_factor ** 2)), self.pool_size, self.pool_size, 0, initialW=self.initializer, initial_bias=None),
-            dc10=L.ConvolutionND(3, int(self.init_channel * (self.ap_factor ** 1) + self.init_channel * (self.ap_factor ** 2)), int(self.init_channel * (self.ap_factor ** 1)), self.kernel_size, 1, int(self.kernel_size/2), initialW=self.initializer, initial_bias=None),
-            dc11=L.ConvolutionND(3, int(self.init_channel * (self.ap_factor ** 1)), int(self.init_channel * (self.ap_factor ** 1)), self.kernel_size, 1, int(self.kernel_size/2), initialW=self.initializer, initial_bias=None),
+            dc9=L.DeconvolutionND(ndim, int(init_channel * (ap_factor ** 2)), int(init_channel * (ap_factor ** 2)), self.pool_size, self.pool_size, 0, initialW=initializer, initial_bias=None),
+            dc10=L.ConvolutionND(ndim, int(init_channel * (ap_factor ** 1) + init_channel * (ap_factor ** 2)), int(init_channel * (ap_factor ** 1)), kernel_size, 1, int(kernel_size/2), initialW=initializer, initial_bias=None),
+            dc11=L.ConvolutionND(ndim, int(init_channel * (ap_factor ** 1)), int(init_channel * (ap_factor ** 1)), kernel_size, 1, int(kernel_size/2), initialW=initializer, initial_bias=None),
 
-            dc12=L.ConvolutionND(3, int(self.init_channel * (self.ap_factor ** 1)), n_class, 1, 1, initialW=self.initializer, initial_bias=None),
+            dc12=L.ConvolutionND(ndim, int(init_channel * (ap_factor ** 1)), n_class, 1, 1, initialW=initializer, initial_bias=None),
 
-            bnc0=L.BatchNormalization(self.init_channel),
-            bnc1=L.BatchNormalization(int(self.init_channel * (self.ap_factor ** 1))),
+            bnc0=L.BatchNormalization(init_channel),
+            bnc1=L.BatchNormalization(int(init_channel * (ap_factor ** 1))),
 
-            bnc2=L.BatchNormalization(int(self.init_channel * (self.ap_factor ** 1))),
-            bnc3=L.BatchNormalization(int(self.init_channel * (self.ap_factor ** 2))),
+            bnc2=L.BatchNormalization(int(init_channel * (ap_factor ** 1))),
+            bnc3=L.BatchNormalization(int(init_channel * (ap_factor ** 2))),
 
-            bnc4=L.BatchNormalization(int(self.init_channel * (self.ap_factor ** 2))),
-            bnc5=L.BatchNormalization(int(self.init_channel * (self.ap_factor ** 3))),
+            bnc4=L.BatchNormalization(int(init_channel * (ap_factor ** 2))),
+            bnc5=L.BatchNormalization(int(init_channel * (ap_factor ** 3))),
 
-            bnc6=L.BatchNormalization(int(self.init_channel * (self.ap_factor ** 3))),
-            bnc7=L.BatchNormalization(int(self.init_channel * (self.ap_factor ** 4))),
+            bnc6=L.BatchNormalization(int(init_channel * (ap_factor ** 3))),
+            bnc7=L.BatchNormalization(int(init_channel * (ap_factor ** 4))),
 
-            bnc8=L.BatchNormalization(int(self.init_channel * (self.ap_factor ** 4))),
-            bnc9=L.BatchNormalization(int(self.init_channel * (self.ap_factor ** 5))),
-            bndc1=L.BatchNormalization(int(self.init_channel * (self.ap_factor ** 4))),
-            bndc2=L.BatchNormalization(int(self.init_channel * (self.ap_factor ** 4))),
-            bndc4=L.BatchNormalization(int(self.init_channel * (self.ap_factor ** 3))),
-            bndc5=L.BatchNormalization(int(self.init_channel * (self.ap_factor ** 3))),
-            bndc7=L.BatchNormalization(int(self.init_channel * (self.ap_factor ** 2))),
-            bndc8=L.BatchNormalization(int(self.init_channel * (self.ap_factor ** 2))),
-            bndc10=L.BatchNormalization(int(self.init_channel * (self.ap_factor ** 1))),
-            bndc11=L.BatchNormalization(int(self.init_channel * (self.ap_factor ** 1)))
-
+            bnc8=L.BatchNormalization(int(init_channel * (ap_factor ** 4))),
+            bnc9=L.BatchNormalization(int(init_channel * (ap_factor ** 5))),
+            bndc1=L.BatchNormalization(int(init_channel * (ap_factor ** 4))),
+            bndc2=L.BatchNormalization(int(init_channel * (ap_factor ** 4))),
+            bndc4=L.BatchNormalization(int(init_channel * (ap_factor ** 3))),
+            bndc5=L.BatchNormalization(int(init_channel * (ap_factor ** 3))),
+            bndc7=L.BatchNormalization(int(init_channel * (ap_factor ** 2))),
+            bndc8=L.BatchNormalization(int(init_channel * (ap_factor ** 2))),
+            bndc10=L.BatchNormalization(int(init_channel * (ap_factor ** 1))),
+            bndc11=L.BatchNormalization(int(init_channel * (ap_factor ** 1)))
         )
 
     def _calc(self, x):
@@ -322,7 +357,8 @@ class Model_L4(Chain):
             del h
             return pred.data
         else:
-            loss = F.softmax_cross_entropy(h, t, class_weight=self.class_weight)
+            #loss = eval(self.loss_func)(h, t, class_weight=self.class_weight)
+            loss = eval(self.loss_func)(h, t)
             pred = F.softmax(h)
             del h
             return loss, pred.data

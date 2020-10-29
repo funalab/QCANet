@@ -14,23 +14,35 @@ from skimage import transform as tr
 from skimage import morphology as mor
 from argparse import ArgumentParser
 from chainer import cuda
-from lib.model import Model_L2, Model_L3, Model_L4
-from lib.utils import Utils
-from lib.trainer import NSNTrainer
+
+sys.path.append(os.getcwd())
+from src.lib.model import Model_L2, Model_L3, Model_L4
+from src.lib.utils import mirror_extension_image
 
 
 class TestNDN():
-    def __init__(self, model=None, patchsize=128, stride=64, resolution=(1.0, 1.0, 2.18),
-                 scaling=True, delv=3, opbase=None, gpu=False):
+    def __init__(
+        self,
+        model=None,
+        patchsize=128,
+        stride=64,
+        resolution=(1.0, 1.0, 2.18),
+        scaling=True,
+        delv=3,
+        opbase=None,
+        gpu=False,
+        ndim=3
+        ):
         self.model = model
-        self.patchsize = patchsize
-        self.stride = stride
+        self.patchsize = (patchsize, patchsize, patchsize)
+        self.stride = (stride, stride, stride)
         self.resolution = resolution
         self.scaling = scaling
         self.delv = delv
         self.opbase = opbase
         self.gpu = gpu
         self.psep = '/'
+        self.ndim = ndim
 
     def NuclearDetection(self, image_path):
         segbase = 'DetectionImages'
@@ -40,70 +52,102 @@ class TestNDN():
         if not (pt.exists(self.opbase + self.psep + labbase)):
             os.mkdir(self.opbase + self.psep + labbase)
 
-        util = Utils(self.patchsize)
         image = io.imread(image_path)
         im_size = image.shape
-        ip_size = (int(image.shape[0] * self.resolution[2]), int(image.shape[1] * self.resolution[1]), int(image.shape[2] * self.resolution[0]))
+        if self.ndim == 2:
+            ip_size = (int(image.shape[0] * self.resolution[1]), int(image.shape[1] * self.resolution[0]))
+            sh = [int(self.stride[0]/2), int(self.stride[1]/2)]
+        elif self.ndim == 3:
+            ip_size = (int(image.shape[0] * self.resolution[2]), int(image.shape[1] * self.resolution[1]), int(image.shape[2] * self.resolution[0]))
+            sh = [int(self.stride[0]/2), int(self.stride[1]/2), int(self.stride[2]/2)]
         image = tr.resize(image, ip_size, order = 1, preserve_range = True)
         im_size_ip = image.shape
 
         # Scaling
         if self.scaling:
             image = image.astype(np.float32)
+            #image = image / image.max()
             image = (image - image.min()) / (image.max() - image.min())
 
-        # Extension Image
-        if self.patchsize > np.max(ip_size):
-            pad_size = (self.patchsize, self.patchsize, self.patchsize)
-        else:
-            ''' calculation for pad size'''
-            pad_size = []
-            for axis in range(len(ip_size)):
-                if (ip_size[axis] - self.patchsize) % self.stride == 0:
-                    stride_num = (ip_size[axis] - self.patchsize) / self.stride
-                else:
-                    stride_num = (ip_size[axis] - self.patchsize) / self.stride + 1
-                pad_size.append(self.stride * stride_num + self.patchsize)
-        image = util.mirrorExtensionImage(image=image, length=int(self.patchsize))[0:pad_size[0], 0:pad_size[1], 0:pad_size[2]]
-        pre_img = np.zeros((image.shape))
 
-        for z in range(0, pad_size[0]-self.stride, self.stride):
-            for y in range(0, pad_size[1]-self.stride, self.stride):
-                for x in range(0, pad_size[2]-self.stride, self.stride):
-                    x_patch = image[z:z+self.patchsize, y:y+self.patchsize, x:x+self.patchsize]
-                    x_patch = x_patch.reshape(1, 1, self.patchsize, self.patchsize, self.patchsize).astype(np.float32)
+        ''' calculation for pad size'''
+        #if np.min(self.patchsize) > np.max(im_size):
+        if np.min(self.patchsize) > np.max(np.array(im_size) + np.array(sh)*2):
+            if self.ndim == 2:
+                pad_size = [self.patchsize[0], self.patchsize[1]]
+            elif self.ndim == 3:
+                pad_size = [self.patchsize[0], self.patchsize[1], self.patchsize[2]]
+        else:
+            pad_size = []
+            for axis in range(len(im_size_ip)):
+                if (im_size_ip[axis] + 2*sh[axis] - self.patchsize[axis]) % self.stride[axis] == 0:
+                    stride_num = int((im_size_ip[axis] + 2*sh[axis] - self.patchsize[axis]) / self.stride[axis])
+                else:
+                    stride_num = int((im_size_ip[axis] + 2*sh[axis] - self.patchsize[axis]) / self.stride[axis]) + 1
+                pad_size.append(int(self.stride[axis] * stride_num + self.patchsize[axis]))
+
+
+        pre_img = np.zeros(pad_size)
+
+        if self.ndim == 2:
+            image = mirror_extension_image(image=image, ndim=self.ndim, length=int(np.max(self.patchsize)))[self.patchsize[0]-sh[0]:self.patchsize[0]-sh[0]+pad_size[0], self.patchsize[1]-sh[1]:self.patchsize[1]-sh[1]+pad_size[1]]
+            for y in range(0, pad_size[0]-self.stride[0], self.stride[0]):
+                for x in range(0, pad_size[1]-self.stride[1], self.stride[1]):
+                    x_patch = image[y:y+self.patchsize[0], x:x+self.patchsize[1]]
+                    x_patch = np.expand_dims(np.expand_dims(x_patch.astype(np.float32), axis=0), axis=0)
                     if self.gpu >= 0:
                         x_patch = cuda.to_gpu(x_patch)
-                    s_output = self.model(x_patch, seg=True)
+                    s_output = self.model(x=x_patch, t=None, seg=True)
                     if self.gpu >= 0:
                         s_output = cuda.to_cpu(s_output)
                     pred = copy.deepcopy((0 < (s_output[0][1] - s_output[0][0])) * 255)
                     # Add segmentation image
-                    pre_img[z:z+self.patchsize, y:y+self.patchsize, x:x+self.patchsize] += pred
-        seg_img = (pre_img > 0) * 255
-        seg_img = seg_img[0:im_size_ip[0], 0:im_size_ip[1], 0:im_size_ip[2]]
+                    pre_img[y:y+self.stride[0], x:x+self.stride[1]] += pred[sh[0]:-sh[0], sh[1]:-sh[1]]
+            seg_img = (pre_img > 0) * 255
+            seg_img = seg_img[0:im_size_ip[0], 0:im_size_ip[1]]
+
+        elif self.ndim == 3:
+            image = mirror_extension_image(image=image, ndim=self.ndim, length=int(np.max(self.patchsize)))[self.patchsize[0]-sh[0]:self.patchsize[0]-sh[0]+pad_size[0], self.patchsize[1]-sh[1]:self.patchsize[1]-sh[1]+pad_size[1], self.patchsize[2]-sh[2]:self.patchsize[2]-sh[2]+pad_size[2]]
+            for z in range(0, pad_size[0]-self.stride[0], self.stride[0]):
+                for y in range(0, pad_size[1]-self.stride[1], self.stride[1]):
+                    for x in range(0, pad_size[2]-self.stride[2], self.stride[2]):
+                        x_patch = image[z:z+self.patchsize[0], y:y+self.patchsize[1], x:x+self.patchsize[2]]
+                        x_patch = np.expand_dims(np.expand_dims(x_patch.astype(np.float32), axis=0), axis=0)
+                        if self.gpu >= 0:
+                            x_patch = cuda.to_gpu(x_patch)
+                        s_output = self.model(x=x_patch, t=None, seg=True)
+                        if self.gpu >= 0:
+                            s_output = cuda.to_cpu(s_output)
+                        pred = copy.deepcopy((0 < (s_output[0][1] - s_output[0][0])) * 255)
+                        # Add segmentation image
+                        pre_img[z:z+self.stride[0], y:y+self.stride[1], x:x+self.stride[2]] += pred[sh[0]:-sh[0], sh[1]:-sh[1], sh[2]:-sh[2]]
+            seg_img = (pre_img > 0) * 255
+            seg_img = seg_img[0:im_size_ip[0], 0:im_size_ip[1], 0:im_size_ip[2]]
+
         seg_img = (tr.resize(seg_img, im_size, order = 1, preserve_range = True) > 0) * 255
-        filename = self.opbase + self.psep + segbase + self.psep + 'detimg_{}.tif'.format(image_path[image_path.rfind('/')+1:image_path.rfind('.')])
+        filename = self.opbase + self.psep + segbase + self.psep + os.path.basename(image_path)
+        # filename = self.opbase + self.psep + segbase + self.psep + 'detimg_t{0:03d}.tif'.format(int(image_path[image_path.rfind('/')+1:image_path.rfind('.')]))
         io.imsave(filename, seg_img.astype(np.uint8))
-        lab_img = mor.label(seg_img, neighbors=4)
+        lab_img = mor.label(seg_img.astype(np.uint16), neighbors=4)
         mask_size = np.unique(lab_img, return_counts=True)[1] < (self.delv + 1)
         remove_voxel = mask_size[lab_img]
         lab_img[remove_voxel] = 0
         labels = np.unique(lab_img)
         lab_img = np.searchsorted(labels, lab_img)
-        filename = self.opbase + self.psep + labbase + self.psep + 'labimg_{}.tif'.format(image_path[image_path.rfind('/')+1:image_path.rfind('.')])
-        io.imsave(filename, lab_img.astype(np.uint8))
+        filename = self.opbase + self.psep + labbase + self.psep + os.path.basename(image_path)
+        # filename = self.opbase + self.psep + labbase + self.psep + 'labimg_t{0:03d}.tif'.format(int(image_path[image_path.rfind('/')+1:image_path.rfind('.')]))
+        io.imsave(filename, lab_img.astype(np.uint16))
 
-        return lab_img
-        
+        return lab_img.astype(np.uint16)
+
 
 if __name__ == '__main__':
-    
+
     start_time = time.time()
     ap = ArgumentParser(description='python test_ndn.py')
     ap.add_argument('--indir', '-i', nargs='?', default='../images/example_input', help='Specify input image')
     ap.add_argument('--outdir', '-o', nargs='?', default='result_test_ndn', help='Specify output files directory for create detection image')
-    ap.add_argument('--model', '-m', nargs='?', default='../models/p128/learned_ndn.npz', help='Specify loading file path of learned NDN Model')
+    ap.add_argument('--model', '-m', nargs='?', default='../models/p128/learned_ndn.model', help='Specify loading file path of learned NDN Model')
     ap.add_argument('--gpu', '-g', type=int, default=-1, help='Specify GPU ID (negative value indicates CPU)')
     ap.add_argument('--patchsize', '-p', type=int, default=128, help='Specify patch size')
     ap.add_argument('--stride', type=int, default=64, help='Specify stride size')
@@ -117,8 +161,8 @@ if __name__ == '__main__':
     argvs = sys.argv
     util = Utils()
     psep = '/'
-    
-    opbase = util.createOpbase(args.outdir)    
+
+    opbase = util.createOpbase(args.outdir)
     patchsize = args.patchsize
     stride = args.stride
     print('Patch Size: {}'.format(patchsize))
@@ -158,7 +202,7 @@ if __name__ == '__main__':
     dlist = os.listdir(args.indir)
     for l in dlist:
         test_ndn.NuclearDetection(args.indir + psep + l)
-    
+
     end_time = time.time()
     etime = end_time - start_time
     print('Elapsed time is (sec) {}'.format(etime))

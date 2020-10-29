@@ -1,19 +1,31 @@
 # MacOSX
 .DS_Store
 
-#Model
-models/p128/learned_nsn.npz
-models/p128/learned_ndn.npz
-
 #Output
-result_*
+result*
 src/result_*
+models*
+GT
+datasets_previous
+
+
+#Run-Time
+confs/3dunet
+confs/celegans
+confs/compare
+
 
 #Python
 src/*.pyc
 src/lib/*.pyc
 src/lib/__pycache__
 src/__pycache__
+src/tools/*.pyc
+src/lib/__pycache__
+src/tools/__pycache__
+datasets/
+src/__pycache__/
+
 
 # Distribution / packaging
 .Python
@@ -45,3 +57,9 @@ pip-delete-this-directory.txt
 
 # PyCharm
 .idea/
+
+#Reedbush
+reedbush
+*.e*
+*.o*
+*.tar.gz
