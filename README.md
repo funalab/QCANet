@@ -1,6 +1,6 @@
 # QCANet: Quantitative Criteria Acquisition Network
 
-This is the code for [Convolutional Neural Network-Based Instance Segmentation Algorithm to Acquire Quantitative Criteria of Early Mouse Development](https://doi.org/10.1101/324186).
+This is the code for [3D convolutional neural networks-based segmentation to acquire quantitative criteria of the nucleus during mouse embryogenesis](https://doi.org/10.1038/s41540-020-00152-8).
 This project is carried out in cooperation with [Funahashi lab at Keio University](https://fun.bio.keio.ac.jp/) and three labs: Hiroi lab at Sanyo-onoda City University, [Kobayashi lab at the University of Tokyo](http://research.crmind.net/), and Yamagata lab at Kindai University.
 
 
