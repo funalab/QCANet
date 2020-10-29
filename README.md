@@ -1,7 +1,7 @@
 # QCANet: Quantitative Criteria Acquisition Network
 
 This is the code for [3D convolutional neural networks-based segmentation to acquire quantitative criteria of the nucleus during mouse embryogenesis](https://doi.org/10.1038/s41540-020-00152-8).
-This project is carried out in cooperation with [Funahashi lab at Keio University](https://fun.bio.keio.ac.jp/) and three labs: Hiroi lab at Sanyo-onoda City University, [Kobayashi lab at the University of Tokyo](http://research.crmind.net/), and Yamagata lab at Kindai University.
+This project is carried out in cooperation with [Funahashi Lab. at Keio University](https://fun.bio.keio.ac.jp/) and three labs: Hiroi Lab. at Sanyo-onoda City University, [Kobayashi Lab. at the University of Tokyo](http://research.crmind.net/), and Yamagata Lab. at Kindai University.
 
 
 ## Overview
@@ -9,8 +9,7 @@ This project is carried out in cooperation with [Funahashi lab at Keio Universit
 Quantitative Criteria Acquisition Network (QCANet) performs instance segmentation of 3D fluorescence microscopic images.
 QCANet consists of Nuclear Segmentation Network (NSN) that learned nuclear segmentation task and Nuclear Detection Network (NDN) that learned nuclear identification task.
 QCANet performs instance segmentation of the time-series 3D fluorescence microscopic images at each time point, and the quantitative criteria for mouse development are extracted from the acquired time-series segmentation image.
-The detailed information on this program is described in our manuscript posted on [bioRxiv](https://doi.org/10.1101/324186).
-
+The detailed information on this code is described in our paper published on [npj Systems Biology and Applications](https://doi.org/10.1038/s41540-020-00152-8).
 
 ## Performance
 
@@ -42,8 +41,8 @@ The left hand side of the image(movie) is the early-stage mouse embryo, whose ce
         % git clone https://github.com/funalab/QCANet.git
         % wget -P QCANet/models/p128 https://fun.bio.keio.ac.jp/software/QCANet/learned_nsn.npz
         % wget -P QCANet/models/p128 https://fun.bio.keio.ac.jp/software/QCANet/learned_ndn.npz
-        % cd QCANet/src
-        % python qca_net.py --scaling_seg --scaling_det [--gpu gpu]
+        % cd QCANet
+        % python src/tools/qca_net.py --scaling_seg --scaling_det [--gpu gpu]
         ```
 
     - On macOS:
@@ -52,8 +51,8 @@ The left hand side of the image(movie) is the early-stage mouse embryo, whose ce
         % git clone https://github.com/funalab/QCANet.git
         % curl -o QCANet/models/p128/learned_nsn.npz https://fun.bio.keio.ac.jp/software/QCANet/learned_nsn.npz
         % curl -o QCANet/models/p128/learned_ndn.npz https://fun.bio.keio.ac.jp/software/QCANet/learned_ndn.npz
-        % cd QCANet/src
-        % python qca_net.py --scaling_seg --scaling_det [--gpu gpu]
+        % cd QCANet
+        % python src/tools/qca_net.py --scaling_seg --scaling_det [--gpu gpu]
         ```
 
 
@@ -67,7 +66,7 @@ The left hand side of the image(movie) is the early-stage mouse embryo, whose ce
 4. Extract quantitative criteria from the segmentation images.
 
     ```sh
-    % python extract.py
+    % python src/tools/extract.py
     ```
 
     Extracted quantitative criteria from the segmentation image will be exported to `criteria.csv`.
@@ -98,12 +97,12 @@ The left hand side of the image(movie) is the early-stage mouse embryo, whose ce
 
     Train NSN:
     ```sh
-    % python train.py --conf_file confs/your_train_nsn.cfg
+    % python src/tools/train.py --conf_file confs/your_train_nsn.cfg
     ```
 
     Train NDN:
     ```sh
-    % python train.py --conf_file confs/your_train_ndn.cfg
+    % python src/tools/train.py --conf_file confs/your_train_ndn.cfg
     ```
 
     Prepare the config file describing detailed parameters for training.
@@ -150,7 +149,7 @@ The left hand side of the image(movie) is the early-stage mouse embryo, whose ce
     The accepted options will be displayed by `-h` option.
 
     ```
-    % python qca_net.py -i validation/ -ms learned_nsn_path -md learned_ndn_path [optional arguments]
+    % python src/tools/qca_net.py -i validation/ -ms learned_nsn_path -md learned_ndn_path [optional arguments]
     ```
 
 
@@ -159,7 +158,7 @@ The left hand side of the image(movie) is the early-stage mouse embryo, whose ce
     Pass the directory path that stores the segmentation images outputted by process 3 (`WatershedSegmentationImages/`) to the argument `-i`.
 
     ```sh
-    % python extract.py -i path_of_segmentation_images
+    % python src/tools/extract.py -i path_of_segmentation_images
     ```
     Extracted quantitative criteria will be exported to `criteria.csv`.
 
@@ -167,7 +166,7 @@ The left hand side of the image(movie) is the early-stage mouse embryo, whose ce
 # Acknowledgement
 
 The microscopic images included in this repository is provided by Yamagata Lab., Kindai University.
-The development of this algorithm was funded by a JSPS KAKENHI Grant (Number 16H04731).
+The development of this algorithm was funded by JSPS KAKENHI Grant Numbers 16H04731 and 20H03244 to [Akira Funahashi](https://github.com/funasoul).
 
 # References
 
