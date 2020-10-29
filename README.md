@@ -39,8 +39,8 @@ The left hand side of the image(movie) is the early-stage mouse embryo, whose ce
 
         ```sh
         % git clone https://github.com/funalab/QCANet.git
-        % wget -P QCANet/models/p128 https://fun.bio.keio.ac.jp/software/QCANet/learned_nsn.npz
-        % wget -P QCANet/models/p128 https://fun.bio.keio.ac.jp/software/QCANet/learned_ndn.npz
+        % wget -P QCANet/models https://fun.bio.keio.ac.jp/software/QCANet/learned_nsn.npz
+        % wget -P QCANet/models https://fun.bio.keio.ac.jp/software/QCANet/learned_ndn.npz
         % cd QCANet
         % python src/tools/qca_net.py --scaling_seg --scaling_det [--gpu gpu]
         ```
@@ -49,8 +49,8 @@ The left hand side of the image(movie) is the early-stage mouse embryo, whose ce
 
         ```sh
         % git clone https://github.com/funalab/QCANet.git
-        % curl -o QCANet/models/p128/learned_nsn.npz https://fun.bio.keio.ac.jp/software/QCANet/learned_nsn.npz
-        % curl -o QCANet/models/p128/learned_ndn.npz https://fun.bio.keio.ac.jp/software/QCANet/learned_ndn.npz
+        % curl -o QCANet/models/learned_nsn.npz https://fun.bio.keio.ac.jp/software/QCANet/learned_nsn.npz
+        % curl -o QCANet/models/learned_ndn.npz https://fun.bio.keio.ac.jp/software/QCANet/learned_ndn.npz
         % cd QCANet
         % python src/tools/qca_net.py --scaling_seg --scaling_det [--gpu gpu]
         ```
