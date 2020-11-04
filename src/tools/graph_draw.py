@@ -247,9 +247,9 @@ if __name__ == '__main__':
     Time = [dt*x for x in range(len(Count))]
 
     gd = GraphDraw(opbase, args.roi)
-    #gd.graph_draw_number(Time, Count)
-    #gd.graph_draw_volume(Time, SumVol, MeanVol, VarVol)
-    #gd.graph_draw_surface(Time, SumArea, MeanArea, VarArea)
+    gd.graph_draw_number(Time, Count)
+    gd.graph_draw_volume(Time, SumVol, MeanVol, VarVol)
+    gd.graph_draw_surface(Time, SumArea, MeanArea, VarArea)
     #gd.graph_draw_centroid(Cent_X, Cent_Y, Cent_Z)
     #gd.graph_draw_lfunction(Cent_X, Cent_Y, Cent_Z)
     gd.graph_draw_centroid_2axis(Cent_X, Cent_Y, 'XY')

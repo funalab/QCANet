@@ -49,7 +49,7 @@ def main():
         c.writerow(['time point', 'Count', 'Sum Volume', 'Mean Volume', 'SD Volume', 'Sum Area', 'Mean Area', 'SD Area', 'Centroid_x', 'Centroid_y', 'Centroid_z'])
 
     kernel = np.ones((3,3,3),np.uint8)
-    dlist = os.listdir(args.indir)
+    dlist = np.sort(os.listdir(args.indir))
     try:
         dlist.pop(dlist.index('.DS_Store'))
     except:
