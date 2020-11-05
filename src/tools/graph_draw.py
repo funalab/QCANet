@@ -52,11 +52,11 @@ class GraphDraw():
         plt.plot(Time, Count)
         if self.GTCount is not None:
             plt.plot(Time, self.GTCount)
-            plt.legend(["QCA Net", "Ground Truth"],loc=2)
+            plt.legend(["QCANet", "Ground Truth"],loc=2)
             ytick = [i for i in range(0, ((np.max(self.GTCount) / 5) + 1) * 5, 5)]
         else:
-            plt.legend(["QCA Net"],loc=2)
-            ytick = [i for i in range(0, ((np.max(Count) / 5) + 1) * 5, 5)]
+            plt.legend(["QCANet"],loc=2)
+            ytick = [i for i in range(0, int(round(((np.max(Count) / 5) + 1))) * 5, 5)]
         plt.xlabel('Time [day]', size=12)
         plt.ylabel('Number of Nuclei', size=12)
         if Time[-1] != 0:
