@@ -25,10 +25,11 @@ class GraphDraw():
     def __init__(self, opbase, roi):
         self.opbase = opbase
         self.roi = roi
-        self.scale = 0.8 * 0.8 * 1.75
+        #self.scale = 0.8 * 0.8 * 1.75
+        self.scale = 0.8 * 0.8 * 2.0
         self.psep = '/'
-        self.x = 127
-        self.y = 124
+        self.x = 160
+        self.y = 160
         self.z = 111
         self.density = 0
         if roi != 0:
@@ -255,4 +256,4 @@ if __name__ == '__main__':
     gd.graph_draw_centroid_2axis(Cent_X, Cent_Y, 'XY')
     gd.graph_draw_centroid_2axis(Cent_Z, Cent_Y, 'YZ')
     gd.graph_draw_centroid_2axis(Cent_X, Cent_Z, 'ZX')
-    plt.show()
+    #plt.show()
