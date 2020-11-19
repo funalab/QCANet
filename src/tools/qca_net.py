@@ -173,7 +173,7 @@ def main():
                 wsimage = morphology.label(seg_img, neighbors=4)
             labels = np.unique(wsimage)
             wsimage = np.searchsorted(labels, wsimage)
-            filename = opbase + psep + wsbase + psep + os.path.basename(image_path)
+            filename = os.path.join(opbase, wsbase, os.path.basename(image_path)[:os.path.basename(image_path).rfind('.')] + '.tif')
             # filename = opbase + psep + wsbase + psep + 'ws_t{0:03d}.tif'.format(int(image_path[image_path.rfind('/')+1:image_path.rfind('.')]))
             io.imsave(filename, wsimage.astype(np.uint16))
 
@@ -188,7 +188,7 @@ def main():
         f.write('======================================\n')
         f.write('Elapsed time is (sec) {} \n'.format(etime))
     print('Elapsed time is (sec) {}'.format(etime))
-    print('QCA Net Completed Process!')
+    print('QCANet Completed Process!')
 
 if __name__ == '__main__':
     main()
