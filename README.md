@@ -133,7 +133,6 @@ The left hand side of the image(movie) is the early-stage mouse embryo, whose ce
     weight_decay                                : Specify weight decay for optimizer scheduling
     gpu                                         : Specify GPU ID (negative value indicates CPU).
     patch_size                                  : Specify one side voxel size of ROI.
-    padding_size                                : Specify image size after padding.
     normalization                               : Will use mean normalization method.
     augmentation                                : Will do data augmentation (flip & random crop).
     class_weight                                : Will use Softmax_Corss_Entropy.
