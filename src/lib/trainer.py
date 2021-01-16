@@ -39,7 +39,7 @@ class NSNTrainer():
         self.opt_method = opt_method
         self.criteria = ['Accuracy', 'Recall', 'Precision', 'Specificity', 'F-measure', 'IoU']
         self.ndim = ndim
-        self.val_iteration = 10
+        self.val_iteration = 1
 
     def training(self, iterators):
         train_iter, val_iter = iterators
@@ -236,12 +236,12 @@ class NSNTrainer():
 
             if self.ndim == 2:
                 im_size = x_batch.shape[2:]
-                stride = [self.patchsize[0]/2, self.patchsize[1]/2]
-                sh = [stride[0]/2, stride[1]/2]
+                stride = [int(self.patchsize[0]/2), int(self.patchsize[1]/2)]
+                sh = [int(stride[0]/2), int(stride[1]/2)]
             elif self.ndim == 3:
                 im_size = x_batch.shape[2:]
-                stride = [self.patchsize[0]/2, self.patchsize[1]/2, self.patchsize[2]/2]
-                sh = [stride[0]/2, stride[1]/2, stride[2]/2]
+                stride = [int(self.patchsize[0]/2), int(self.patchsize[1]/2), int(self.patchsize[2]/2)]
+                sh = [int(stride[0]/2), int(stride[1]/2), int(stride[2]/2)]
 
             ''' calculation for pad size'''
             if np.min(self.patchsize) > np.max(im_size):
@@ -256,7 +256,7 @@ class NSNTrainer():
                         stride_num = (im_size[axis] + 2*sh[axis] - self.patchsize[axis]) / stride[axis]
                     else:
                         stride_num = (im_size[axis] + 2*sh[axis] - self.patchsize[axis]) / stride[axis] + 1
-                    pad_size.append(stride[axis] * stride_num + self.patchsize[axis])
+                    pad_size.append(int(stride[axis] * stride_num + self.patchsize[axis]))
 
             gt = copy.deepcopy(y_batch)
             pre_img = np.zeros(pad_size)
@@ -283,9 +283,9 @@ class NSNTrainer():
             elif self.ndim == 3:
                 x_batch = mirror_extension_image(image=x_batch, ndim=self.ndim, length=int(np.max(self.patchsize)))[:, :, self.patchsize[0]-sh[0]:self.patchsize[0]-sh[0]+pad_size[0], self.patchsize[1]-sh[1]:self.patchsize[1]-sh[1]+pad_size[1], self.patchsize[2]-sh[2]:self.patchsize[2]-sh[2]+pad_size[2]]
                 y_batch = mirror_extension_image(image=y_batch, ndim=self.ndim, length=int(np.max(self.patchsize)))[:, self.patchsize[0]-sh[0]:self.patchsize[0]-sh[0]+pad_size[0], self.patchsize[1]-sh[1]:self.patchsize[1]-sh[1]+pad_size[1], self.patchsize[2]-sh[2]:self.patchsize[2]-sh[2]+pad_size[2]]
-                for z in range(0, pad_size[0]-stride[0], stride[0]):
-                    for y in range(0, pad_size[1]-stride[1], stride[1]):
-                        for x in range(0, pad_size[2]-stride[2], stride[2]):
+                for z in range(0, pad_size[0]-self.patchsize[0], stride[0]):
+                    for y in range(0, pad_size[1]-self.patchsize[1], stride[1]):
+                        for x in range(0, pad_size[2]-self.patchsize[2], stride[2]):
                             x_patch = x_batch[:, :, z:z+self.patchsize[0], y:y+self.patchsize[1], x:x+self.patchsize[2]]
                             y_patch = y_batch[:, z:z+self.patchsize[0], y:y+self.patchsize[1], x:x+self.patchsize[2]]
                             if self.gpu >= 0:
