@@ -80,8 +80,19 @@ class NSNTrainer():
             print('[epoch {}]'.format(epoch))
             traeval, train_sum_loss = self._trainer(train_iter, opt_nsn, epoch=epoch)
             train_eval['loss'].append(train_sum_loss / (N_train * self.batchsize))
-            teseval, test_sum_loss = self._validater(val_iter, epoch=epoch)
-            test_eval['loss'].append(test_sum_loss / (N_test * self.batchsize))
+            model_name = 'BF_nsn_train_e{}.npz'.format(epoch)
+            serializers.save_npz(self.opbase + '/' + model_name, self.model)
+            if epoch > 100:
+                teseval, test_sum_loss = self._validater(val_iter, epoch=epoch)
+                test_eval['loss'].append(test_sum_loss / (N_test * self.batchsize))
+            else:
+                teseval = {}
+                for cri in self.criteria:
+                    teseval[cri] = 0
+                    test_eval['loss'].append(0)
+                    test_sum_loss = 0
+                model_name = 'BF_nsn_val_e{}.npz'.format(epoch)
+                serializers.save_npz(self.opbase + '/' + model_name, self.model)
 
             for cri in self.criteria:
                 train_eval[cri].append(traeval[cri])
@@ -148,7 +159,7 @@ class NSNTrainer():
                 bestEpoch = epoch
                 # Save Model
                 if epoch > 0:
-                    model_name = 'NSN_IoU_p' + str(self.patchsize) + '.npz'
+                    model_name = 'NSN_IoU_e' + str(epoch) + '.npz'
                     serializers.save_npz(self.opbase + '/' + model_name, self.model)
                 else:
                     bestIoU = 0.0
@@ -293,8 +304,8 @@ class NSNTrainer():
                 seg_img = (pre_img > 0) * 1
                 seg_img = seg_img[:im_size[0], :im_size[1], :im_size[2]]
             gt = gt[0]
-            io.imsave('{}/segimg{}_validation.tif'.format(self.opbase, num), np.array(seg_img * 255).astype(np.uint8))
-            io.imsave('{}/gtimg{}_validation.tif'.format(self.opbase, num), np.array(gt * 255).astype(np.uint8))
+            #io.imsave('{}/segimg{}_validation.tif'.format(self.opbase, num), np.array(seg_img * 255).astype(np.uint8))
+            #io.imsave('{}/gtimg{}_validation.tif'.format(self.opbase, num), np.array(gt * 255).astype(np.uint8))
             countListPos = copy.deepcopy(seg_img + gt)
             countListNeg = copy.deepcopy(seg_img - gt)
             TP += len(np.where(countListPos.reshape(countListPos.size)==2)[0])
@@ -399,7 +410,7 @@ class NDNTrainer():
             print('[epoch {}]'.format(epoch))
             traeval, train_sum_loss = self._trainer(train_iter, opt_ndn, epoch=epoch)
             train_eval['loss'].append(train_sum_loss / (N_train * self.batchsize))
-            if epoch > 0:
+            if epoch > 100:
                 teseval, test_sum_loss = self._validater(val_iter, epoch=epoch)
                 test_eval['loss'].append(test_sum_loss / (N_test * self.batchsize))
             else:
@@ -408,6 +419,8 @@ class NDNTrainer():
                     teseval[cri] = 0
                     test_eval['loss'].append(0)
                     test_sum_loss = 0
+                model_name = 'BF_ndn_e{}.npz'.format(epoch)
+                serializers.save_npz(self.opbase + '/' + model_name, self.model)
                 
 
             for cri in self.criteria:
@@ -461,7 +474,7 @@ class NDNTrainer():
                 bestFmeasure = teseval['F-measure']
                 bestEpoch = epoch
                 # Save Model
-                model_name = 'NDN_Fmeasure_p' + str(self.patchsize) + '.npz'
+                model_name = 'NDN_Fmeasure_e' + str(epoch) + '.npz'
                 serializers.save_npz(self.opbase + '/' + model_name, self.model)
             if bestIoU <= teseval['IoU']:
                 bestIoU = teseval['IoU']
@@ -655,8 +668,8 @@ class NDNTrainer():
                 seg_img = (pre_img > 0) * 1
                 seg_img = seg_img[0:im_size[0], 0:im_size[1], 0:im_size[2]]
             gt = gt[0]
-            io.imsave('{}/segimg{}_validation.tif'.format(self.opbase, num), np.array(seg_img * 255).astype(np.uint8))
-            io.imsave('{}/gtimg{}_validation.tif'.format(self.opbase, num), np.array(gt * 255).astype(np.uint8))
+            #io.imsave('{}/segimg{}_validation.tif'.format(self.opbase, num), np.array(seg_img * 255).astype(np.uint8))
+            #io.imsave('{}/gtimg{}_validation.tif'.format(self.opbase, num), np.array(gt * 255).astype(np.uint8))
 
             if epoch > 0:
                 #make Centroid Pred (0 : background, 1 : object)

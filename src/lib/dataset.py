@@ -201,7 +201,7 @@ class PreprocessedDataset(chainer.dataset.DatasetMixin):
         return len(self.img_path)
 
     def _get_image_2d(self, i):
-        image = read_img(os.path.join(self.root_path, 'images_raw', self.img_path[i]), self.arr_type)
+        image = read_img(os.path.join(self.root_path, 'raw', self.img_path[i]), self.arr_type)
         ip_size = (int(image.shape[0] * self.resolution[1]), int(image.shape[1] * self.resolution[1]))
         image = tr.resize(image.astype(np.float32), ip_size, order=1, preserve_range=True)
         pad_size = np.max(np.array(self.crop_size) - np.array(ip_size))
@@ -213,9 +213,9 @@ class PreprocessedDataset(chainer.dataset.DatasetMixin):
 
     def _get_label_2d(self, i):
         if self.model == 'NSN' or self.model == '3DUNet':
-            label = read_img(os.path.join(self.root_path, 'images_nsn', self.img_path[i]), self.arr_type)
+            label = read_img(os.path.join(self.root_path, 'nsn', self.img_path[i]), self.arr_type)
         elif self.model == 'NDN':
-            label = read_img(os.path.join(self.root_path, 'images_ndn', self.img_path[i]), self.arr_type)
+            label = read_img(os.path.join(self.root_path, 'ndn', self.img_path[i]), self.arr_type)
         else:
             print('Warning: select model')
             sys.exit()
@@ -227,7 +227,7 @@ class PreprocessedDataset(chainer.dataset.DatasetMixin):
         return label.astype(np.int32)
 
     def _get_image_3d(self, i):
-        image = read_img(os.path.join(self.root_path, 'images_raw', self.img_path[i]), self.arr_type)
+        image = read_img(os.path.join(self.root_path, 'raw', self.img_path[i]), self.arr_type)
         ip_size = (int(image.shape[0] * self.resolution[2]), int(image.shape[1] * self.resolution[1]), int(image.shape[2] * self.resolution[0]))
         image = tr.resize(image.astype(np.float32), ip_size, order=1, preserve_range=True)
         pad_size = np.max(np.array(self.crop_size) - np.array(ip_size))
@@ -239,9 +239,9 @@ class PreprocessedDataset(chainer.dataset.DatasetMixin):
 
     def _get_label_3d(self, i):
         if self.model == 'NSN' or self.model == '3DUNet':
-            label = read_img(os.path.join(self.root_path, 'images_nsn', self.img_path[i]), self.arr_type)
+            label = read_img(os.path.join(self.root_path, 'nsn', self.img_path[i]), self.arr_type)
         elif self.model == 'NDN':
-            label = read_img(os.path.join(self.root_path, 'images_ndn', self.img_path[i]), self.arr_type)
+            label = read_img(os.path.join(self.root_path, 'ndn', self.img_path[i]), self.arr_type)
         else:
             print('Warning: select model')
             sys.exit()
