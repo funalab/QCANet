@@ -46,11 +46,11 @@ class TestNDN():
 
     def NuclearDetection(self, image_path):
         segbase = 'DetectionImages'
-        if not (pt.exists(self.opbase + self.psep + segbase)):
-            os.mkdir(self.opbase + self.psep + segbase)
+        #if not (pt.exists(self.opbase + self.psep + segbase)):
+        #    os.mkdir(self.opbase + self.psep + segbase)
         labbase = 'LabelingDetectionImages'
-        if not (pt.exists(self.opbase + self.psep + labbase)):
-            os.mkdir(self.opbase + self.psep + labbase)
+        #if not (pt.exists(self.opbase + self.psep + labbase)):
+        #    os.mkdir(self.opbase + self.psep + labbase)
 
         image = io.imread(image_path)
         im_size = image.shape

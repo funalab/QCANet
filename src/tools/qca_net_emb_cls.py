@@ -68,6 +68,7 @@ def main():
     args = ap.parse_args()
     argvs = sys.argv
     psep = '/'
+    os.makedirs(args.outdir, exist_ok=True)
 
     #opbase = createOpbase(args.outdir)
     #wsbase = 'WatershedSegmentationImages'
@@ -81,16 +82,6 @@ def main():
     print('Delete Voxel Size of Detection Region: {}'.format(args.delete))
     print('Scaling Image in Segmentation Phase: {}'.format(args.scaling_seg))
     print('Scaling Image in Detection Phase: {}'.format(args.scaling_det))
-    with open(opbase + psep + 'result.txt', 'w') as f:
-        f.write('python ' + ' '.join(argvs) + '\n')
-        f.write('[Properties of parameter]\n')
-        f.write('Output Directory: {}\n'.format(opbase))
-        f.write('Patch Size of Segmentation: {}\n'.format(args.patchsize_seg))
-        f.write('Patch Size of Detection: {}\n'.format(args.patchsize_det))
-        f.write('Delete Pixel Size of Detection Region: {}\n'.format(args.delete))
-        f.write('Scaling Image in Segmentation Phase: {}\n'.format(args.scaling_seg))
-        f.write('Scaling Image in Detection Phase: {}\n'.format(args.scaling_det))
-
 
     # Create Model
     class_weight = np.array([1, 1]).astype(np.float32)
@@ -155,6 +146,7 @@ def main():
         ndim=args.ndim
     )
     for dl in dlist:
+        print(dl)
         image_path = os.path.join(args.indir, dl)
 
         ### Segmentation Phase ###

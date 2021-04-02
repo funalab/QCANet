@@ -43,8 +43,8 @@ class TestNSN():
 
     def NuclearSegmentation(self, image_path):
         segbase = 'SegmentationImages'
-        if not (pt.exists(self.opbase + self.psep + segbase)):
-            os.mkdir(self.opbase + self.psep + segbase)
+        #if not (pt.exists(self.opbase + self.psep + segbase)):
+        #    os.mkdir(self.opbase + self.psep + segbase)
 
         image = io.imread(image_path)
         im_size = image.shape
