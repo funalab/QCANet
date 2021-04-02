@@ -92,10 +92,6 @@ def main():
 
 
     # Create Model
-    class_weight = np.array([1, 1]).astype(np.float32)
-    if args.gpu >= 0:
-        class_weight = cuda.to_gpu(class_weight)
-
     print('Initializing models...')
 
     #args.model = 'NDN'
