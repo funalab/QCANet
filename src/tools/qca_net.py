@@ -36,7 +36,7 @@ def main():
     ap.add_argument('--outdir', '-o', nargs='?', default='results/result_qcanet', help='Specify output files directory for create segmentation, labeling & classification images')
     ap.add_argument('--model_nsn', '-ms', nargs='?', default='models/learned_nsn.npz', help='Specify loading file path of Learned Segmentation Model')
     ap.add_argument('--model_ndn', '-md', nargs='?', default='models/learned_ndn.npz', help='Specify loading file path of Learned Detection Model')
-    ap.add_argument('--gpu', '-g', type=int, default=-1, help='Specify GPU ID (negative value indicates CPU)')
+    ap.add_argument('--gpu', '-g', type=str, default='cpu', help='Specify GPU ID (negative value indicates CPU)')
     ap.add_argument('--patchsize_seg', '-ps', type=int, default=96, help='Specify pixel size of Segmentation Patch')
     ap.add_argument('--patchsize_det', '-pd', type=int, default=96, help='Specify pixel size of Detection Patch')
     ap.add_argument('--stride_seg', '-ss', type=int, default=48, help='Specify pixel size of Segmentation Stride')
@@ -102,8 +102,8 @@ def main():
     else:
         raise ValueError('Specified model path')
 
-    nsn = nsn.to(args.device)
-    ndn = ndn.to(args.device)
+    nsn = nsn.to(args.gpu)
+    ndn = ndn.to(args.gpu)
 
     dlist = os.listdir(args.indir)
     with open(opbase + psep + 'result.txt', 'a') as f:

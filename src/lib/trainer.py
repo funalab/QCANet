@@ -1,15 +1,17 @@
 # -*- coding: utf-8 -*-
 
-import numpy as np
+import os
 import copy
 import csv
 import time
 import sys
+import numpy as np
 import skimage.io as io
 from skimage import morphology
 
 import torch
 import torch.optim as optim
+
 from src.lib.utils import mirror_extension_image
 
 sys.setrecursionlimit(200000)
@@ -57,9 +59,10 @@ class NSNTrainer():
 
         for epoch in range(1, self.epoch + 1):
             print('[epoch {}]'.format(epoch))
+            self.model.train()
             traeval, train_sum_loss = self._trainer(train_iter, epoch=epoch)
             train_eval['loss'].append(train_sum_loss / (N_train * self.batchsize))
-
+            self.model.eval()
             if epoch % self.val_iteration == 0:
                 teseval, test_sum_loss = self._validater(val_iter, epoch=epoch)
                 test_eval['loss'].append(test_sum_loss / (N_test * self.batchsize))
@@ -116,8 +119,8 @@ class NSNTrainer():
                 # Save Model
                 if epoch > 0:
                     model_name = 'NSN_bestIoU.npz'
-                    serializers.save_npz(self.opbase + '/' + model_name, self.model)
                     torch.save(self.model.to('cpu'), os.path.join(self.opbase, model_name))
+                    self.model.to(torch.device(self.gpu))
                 else:
                     bestIoU = 0.0
 
@@ -148,15 +151,15 @@ class NSNTrainer():
         for batch in dataset_iter:
             x_patch, y_patch = batch
             self.optimizer.zero_grad()
-            s_loss, s_output = self.model(x=x_patch[0].to(torch.device(self.gpu)), t=y_patch.to(torch.device(self.gpu)), seg=False)
+            s_loss, s_output = self.model(x=x_patch.to(torch.device(self.gpu)), t=y_patch.to(torch.device(self.gpu)), seg=False)
             s_loss.backward()
             self.optimizer.step()
 
             #train_eval['loss'].append(s_loss.data)
-            sum_loss += float(cuda.to_cpu(s_loss.data) * self.batchsize)
+            sum_loss += float(s_loss.to(torch.device('cpu')) * self.batchsize)
 
-            y_patch = y_patch.to(torch.device('cpu'))
-            s_output = s_output.to(torch.device('cpu'))
+            y_patch = y_patch.to(torch.device('cpu')).numpy()
+            s_output = s_output.to(torch.device('cpu')).numpy()
             #make pred (0 : background, 1 : object)
             pred = copy.deepcopy((0 < (s_output[0][1] - s_output[0][0])) * 1)
             countListPos = copy.deepcopy(pred.astype(np.int16) + y_patch.astype(np.int16))
@@ -174,15 +177,16 @@ class NSNTrainer():
         TP, TN, FP, FN = 0, 0, 0, 0
         #dataset_iter.reset()
         sum_loss = 0
+        num = 0
         for batch in dataset_iter:
+            num += 1
             x_batch, y_batch = batch
-            x_batch = x_batch[0]
             if self.ndim == 2:
-                im_size = x_batch.shape[2:]
+                im_size = x_batch.shape[1:]
                 stride = [int(self.patchsize[0]/2), int(self.patchsize[1]/2)]
                 sh = [int(stride[0]/2), int(stride[1]/2)]
             elif self.ndim == 3:
-                im_size = x_batch.shape[2:]
+                im_size = x_batch.shape[1:]
                 stride = [int(self.patchsize[0]/2), int(self.patchsize[1]/2), int(self.patchsize[2]/2)]
                 sh = [int(stride[0]/2), int(stride[1]/2), int(stride[2]/2)]
 
@@ -205,45 +209,37 @@ class NSNTrainer():
             pre_img = np.zeros(pad_size)
 
             if self.ndim == 2:
-                x_batch = mirror_extension_image(image=x_batch, ndim=self.ndim, length=int(np.max(self.patchsize)))[:, :, self.patchsize[0]-sh[0]:self.patchsize[0]-sh[0]+pad_size[0], self.patchsize[1]-sh[1]:self.patchsize[1]-sh[1]+pad_size[1]]
+                x_batch = mirror_extension_image(image=x_batch, ndim=self.ndim, length=int(np.max(self.patchsize)))[:, self.patchsize[0]-sh[0]:self.patchsize[0]-sh[0]+pad_size[0], self.patchsize[1]-sh[1]:self.patchsize[1]-sh[1]+pad_size[1]]
                 y_batch = mirror_extension_image(image=y_batch, ndim=self.ndim,  length=int(np.max(self.patchsize)))[:, self.patchsize[0]-sh[0]:self.patchsize[0]-sh[0]+pad_size[0], self.patchsize[1]-sh[1]:self.patchsize[1]-sh[1]+pad_size[1]]
                 for y in range(0, pad_size[0]-stride[0], stride[0]):
                     for x in range(0, pad_size[1]-stride[1], stride[1]):
-                        x_patch = x_batch[:, :, y:y+self.patchsize[0], x:x+self.patchsize[1]]
+                        x_patch = x_batch[:, y:y+self.patchsize[0], x:x+self.patchsize[1]]
                         y_patch = y_batch[:, y:y+self.patchsize[0], x:x+self.patchsize[1]]
-                        if self.gpu >= 0:
-                            x_patch = cuda.to_gpu(x_patch)
-                            y_patch = cuda.to_gpu(y_patch)
-                        s_loss, s_output = self.model(x=x_patch, t=y_patch, seg=False)
-                        sum_loss += float(cuda.to_cpu(s_loss.data) * self.batchsize)
-                        if self.gpu >= 0:
-                            s_output = cuda.to_cpu(s_output)
+                        s_loss, s_output = self.model(x=x_patch.to(torch.device(self.gpu)), t=y_patch.to(torch.device(self.gpu)), seg=False)
+                        sum_loss += float(s_loss.to(torch.device('cpu')) * self.batchsize)
+                        s_output = s_output.to(torch.device('cpu'))
                         pred = copy.deepcopy((0 < (s_output[0][1] - s_output[0][0])) * 255)
                         # Add segmentation image
                         pre_img[y:y+stride[0], x:x+stride[1]] += pred[sh[0]:-sh[0], sh[1]:-sh[1]]
                 seg_img = (pre_img > 0) * 1
-                seg_img = seg_img[:im_size[0], :im_size[1]]
+                seg_img = seg_img[:im_size[0], :im_size[1]].numpy()
             elif self.ndim == 3:
-                x_batch = mirror_extension_image(image=x_batch, ndim=self.ndim, length=int(np.max(self.patchsize)))[:, :, self.patchsize[0]-sh[0]:self.patchsize[0]-sh[0]+pad_size[0], self.patchsize[1]-sh[1]:self.patchsize[1]-sh[1]+pad_size[1], self.patchsize[2]-sh[2]:self.patchsize[2]-sh[2]+pad_size[2]]
+                x_batch = mirror_extension_image(image=x_batch, ndim=self.ndim, length=int(np.max(self.patchsize)))[:, self.patchsize[0]-sh[0]:self.patchsize[0]-sh[0]+pad_size[0], self.patchsize[1]-sh[1]:self.patchsize[1]-sh[1]+pad_size[1], self.patchsize[2]-sh[2]:self.patchsize[2]-sh[2]+pad_size[2]]
                 y_batch = mirror_extension_image(image=y_batch, ndim=self.ndim, length=int(np.max(self.patchsize)))[:, self.patchsize[0]-sh[0]:self.patchsize[0]-sh[0]+pad_size[0], self.patchsize[1]-sh[1]:self.patchsize[1]-sh[1]+pad_size[1], self.patchsize[2]-sh[2]:self.patchsize[2]-sh[2]+pad_size[2]]
                 for z in range(0, pad_size[0]-self.patchsize[0], stride[0]):
                     for y in range(0, pad_size[1]-self.patchsize[1], stride[1]):
                         for x in range(0, pad_size[2]-self.patchsize[2], stride[2]):
-                            x_patch = x_batch[:, :, z:z+self.patchsize[0], y:y+self.patchsize[1], x:x+self.patchsize[2]]
-                            y_patch = y_batch[:, z:z+self.patchsize[0], y:y+self.patchsize[1], x:x+self.patchsize[2]]
-                            if self.gpu >= 0:
-                                x_patch = cuda.to_gpu(x_patch)
-                                y_patch = cuda.to_gpu(y_patch)
-                            s_loss, s_output = self.model(x=x_patch, t=y_patch, seg=False)
-                            sum_loss += float(cuda.to_cpu(s_loss.data) * self.batchsize)
-                            if self.gpu >= 0:
-                                s_output = cuda.to_cpu(s_output)
+                            x_patch = torch.Tensor(np.expand_dims(x_batch[:, z:z+self.patchsize[0], y:y+self.patchsize[1], x:x+self.patchsize[2]], axis=0))
+                            y_patch = torch.Tensor(y_batch[:, z:z+self.patchsize[0], y:y+self.patchsize[1], x:x+self.patchsize[2]])
+                            s_loss, s_output = self.model(x=x_patch.to(torch.device(self.gpu)), t=y_patch.to(torch.device(self.gpu)), seg=False)
+                            sum_loss += float(s_loss.to(torch.device('cpu')) * self.batchsize)
+                            s_output = s_output.to(torch.device('cpu')).numpy()
                             pred = copy.deepcopy((0 < (s_output[0][1] - s_output[0][0])) * 255)
                             # Add segmentation image
                             pre_img[z:z+stride[0], y:y+stride[1], x:x+stride[2]] += pred[sh[0]:-sh[0], sh[1]:-sh[1], sh[2]:-sh[2]]
                 seg_img = (pre_img > 0) * 1
                 seg_img = seg_img[:im_size[0], :im_size[1], :im_size[2]]
-            gt = gt[0]
+            gt = gt[0].numpy()
             io.imsave('{}/segimg{}_validation.tif'.format(self.opbase, num), np.array(seg_img * 255).astype(np.uint8))
             io.imsave('{}/gtimg{}_validation.tif'.format(self.opbase, num), np.array(gt * 255).astype(np.uint8))
             countListPos = copy.deepcopy(seg_img.astype(np.int16) + gt.astype(np.int16))
@@ -333,8 +329,10 @@ class NDNTrainer():
 
         for epoch in range(1, self.epoch + 1):
             print('[epoch {}]'.format(epoch))
+            self.model.train()
             traeval, train_sum_loss = self._trainer(train_iter, epoch=epoch)
             train_eval['loss'].append(train_sum_loss / (N_train * self.batchsize))
+            self.model.eval()
             if epoch % self.val_iteration == 0:
                 teseval, test_sum_loss = self._validater(val_iter, epoch=epoch)
                 test_eval['loss'].append(test_sum_loss / (N_test * self.batchsize))
@@ -381,6 +379,7 @@ class NDNTrainer():
                 # Save Model
                 model_name = 'NDN_bestFmeasure.npz'
                 torch.save(self.model.to('cpu'), os.path.join(self.opbase, model_name))
+                self.model.to(torch.device(self.gpu))
 
             if bestIoU <= teseval['IoU']:
                 bestIoU = teseval['IoU']
@@ -409,15 +408,15 @@ class NDNTrainer():
         for batch in dataset_iter:
             x_patch, y_patch = batch
             self.optimizer.zero_grad()
-            s_loss, s_output = self.model(x=x_patch[0].to(torch.device(self.gpu)), t=y_patch.to(torch.device(self.gpu)), seg=False)
+            s_loss, s_output = self.model(x=x_patch.to(torch.device(self.gpu)), t=y_patch.to(torch.device(self.gpu)), seg=False)
             s_loss.backward()
             self.optimizer.step()
 
             #train_eval['loss'].append(s_loss.data)
             sum_loss += float(s_loss.to(torch.device('cpu')) * self.batchsize)
 
-            y_patch = y_patch.to(torch.device('cpu'))
-            s_output = s_output.to(torch.device('cpu'))
+            y_patch = y_patch.to(torch.device('cpu')).numpy()
+            s_output = s_output.to(torch.device('cpu')).numpy()
             #make pred (0 : background, 1 : object)
             pred = copy.deepcopy((0 < (s_output[0][1] - s_output[0][0])) * 1)
             if epoch % self.val_iteration == 0:
@@ -486,15 +485,16 @@ class NDNTrainer():
         TP, numPR, numGT = 0, 0, 0
         #dataset_iter.reset()
         sum_loss = 0
+        num = 0
         for batch in dataset_iter:
+            num += 1
             x_batch, y_batch = batch
-            x_batch = x_batch[0]
             if self.ndim == 2:
-                im_size = x_batch.shape[2:]
+                im_size = x_batch.shape[1:]
                 stride = [self.patchsize[0]/2, self.patchsize[1]/2]
                 sh = [stride[0]/2, stride[1]/2]
             elif self.ndim == 3:
-                im_size = x_batch.shape[2:]
+                im_size = x_batch.shape[1:]
                 stride = [self.patchsize[0]/2, self.patchsize[1]/2, self.patchsize[2]/2]
                 sh = [stride[0]/2, stride[1]/2, stride[2]/2]
 
@@ -516,47 +516,39 @@ class NDNTrainer():
             gt = copy.deepcopy(y_batch)
 
             if self.ndim == 2:
-                x_batch = mirror_extension_image(image=x_batch, ndim=self.ndim, length=int(np.max(self.patchsize)))[:, :, self.patchsize[0]-sh[0]:self.patchsize[0]-sh[0]+pad_size[0], self.patchsize[1]-sh[1]:self.patchsize[1]-sh[1]+pad_size[1]]
+                x_batch = mirror_extension_image(image=x_batch, ndim=self.ndim, length=int(np.max(self.patchsize)))[:, self.patchsize[0]-sh[0]:self.patchsize[0]-sh[0]+pad_size[0], self.patchsize[1]-sh[1]:self.patchsize[1]-sh[1]+pad_size[1]]
                 y_batch = mirror_extension_image(image=y_batch, ndim=self.ndim, length=int(np.max(self.patchsize)))[:, self.patchsize[0]-sh[0]:self.patchsize[0]-sh[0]+pad_size[0], self.patchsize[1]-sh[1]:self.patchsize[1]-sh[1]+pad_size[1]]
                 pre_img = np.zeros(pad_size)
                 for y in range(0, pad_size[0]-stride[0], stride[0]):
                     for x in range(0, pad_size[1]-stride[1], stride[1]):
-                        x_patch = x_batch[:, :, y:y+self.patchsize[0], x:x+self.patchsize[1]]
+                        x_patch = torch.Tensor(np.expand_dims(x_batch[:, y:y+self.patchsize[0], x:x+self.patchsize[1]], axis=0))
                         y_patch = y_batch[:, y:y+self.patchsize[0], x:x+self.patchsize[1]]
-                        if self.gpu >= 0:
-                            x_patch = cuda.to_gpu(x_patch)
-                            y_patch = cuda.to_gpu(y_patch)
-                        s_loss, s_output = self.model(x=x_patch, t=y_patch, seg=False)
-                        sum_loss += float(cuda.to_cpu(s_loss.data) * self.batchsize)
-                        if self.gpu >= 0:
-                            s_output = cuda.to_cpu(s_output)
+                        s_loss, s_output = self.model(x=x_patch.to(torch.device(self.gpu)), t=y_patch.to(torch.device(self.gpu)), seg=False)
+                        sum_loss += float(s_loss.to(torch.device('cpu')) * self.batchsize)
+                        s_output = s_output.to(torch.device('cpu'))
                         pred = copy.deepcopy((0 < (s_output[0][1] - s_output[0][0])) * 255)
                         # Add segmentation image
                         pre_img[y:y+self.patchsize[0]-stride[0], x:x+self.patchsize[1]-stride[1]] += pred[sh[0]:-sh[0], sh[1]:-sh[1]]
                 seg_img = (pre_img > 0) * 1
                 seg_img = seg_img[0:im_size[0], 0:im_size[1]]
             elif self.ndim == 3:
-                x_batch = mirror_extension_image(image=x_batch, ndim=self.ndim, length=int(np.max(self.patchsize)))[:, :, self.patchsize[0]-sh[0]:self.patchsize[0]-sh[0]+pad_size[0], self.patchsize[1]-sh[1]:self.patchsize[1]-sh[1]+pad_size[1], self.patchsize[2]-sh[2]:self.patchsize[2]-sh[2]+pad_size[2]]
+                x_batch = mirror_extension_image(image=x_batch, ndim=self.ndim, length=int(np.max(self.patchsize)))[:, self.patchsize[0]-sh[0]:self.patchsize[0]-sh[0]+pad_size[0], self.patchsize[1]-sh[1]:self.patchsize[1]-sh[1]+pad_size[1], self.patchsize[2]-sh[2]:self.patchsize[2]-sh[2]+pad_size[2]]
                 y_batch = mirror_extension_image(image=y_batch, ndim=self.ndim, length=int(np.max(self.patchsize)))[:, self.patchsize[0]-sh[0]:self.patchsize[0]-sh[0]+pad_size[0], self.patchsize[1]-sh[1]:self.patchsize[1]-sh[1]+pad_size[1], self.patchsize[2]-sh[2]:self.patchsize[2]-sh[2]+pad_size[2]]
                 pre_img = np.zeros(pad_size)
                 for z in range(0, pad_size[0]-stride[0], stride[0]):
                     for y in range(0, pad_size[1]-stride[1], stride[1]):
                         for x in range(0, pad_size[2]-stride[2], stride[2]):
-                            x_patch = x_batch[:, :, z:z+self.patchsize[0], y:y+self.patchsize[1], x:x+self.patchsize[2]]
+                            x_patch = torch.Tensor(np.expand_dims(x_batch[:, z:z+self.patchsize[0], y:y+self.patchsize[1], x:x+self.patchsize[2]], axis=0))
                             y_patch = y_batch[:, z:z+self.patchsize[0], y:y+self.patchsize[1], x:x+self.patchsize[2]]
-                            if self.gpu >= 0:
-                                x_patch = cuda.to_gpu(x_patch)
-                                y_patch = cuda.to_gpu(y_patch)
-                            s_loss, s_output = self.model(x=x_patch, t=y_patch, seg=False)
-                            sum_loss += float(cuda.to_cpu(s_loss.data) * self.batchsize)
-                            if self.gpu >= 0:
-                                s_output = cuda.to_cpu(s_output)
+                            s_loss, s_output = self.model(x=x_patch.to(torch.device(self.gpu)), t=y_patch.to(torch.device(self.gpu)), seg=False)
+                            sum_loss += float(s_loss.data.to(torch.device('cpu')) * self.batchsize)
+                            s_output = s_output.to(torch.device('cpu')).numpy()
                             pred = copy.deepcopy((0 < (s_output[0][1] - s_output[0][0])) * 255)
                             # Add segmentation image
                             pre_img[z:z+self.patchsize[0]-stride[0], y:y+self.patchsize[1]-stride[1], x:x+self.patchsize[2]-stride[2]] += pred[sh[0]:-sh[0], sh[1]:-sh[1], sh[2]:-sh[2]]
                 seg_img = (pre_img > 0) * 1
                 seg_img = seg_img[0:im_size[0], 0:im_size[1], 0:im_size[2]]
-            gt = gt[0]
+            gt = gt[0].numpy()
             io.imsave('{}/segimg{}_validation.tif'.format(self.opbase, num), np.array(seg_img * 255).astype(np.uint8))
             io.imsave('{}/gtimg{}_validation.tif'.format(self.opbase, num), np.array(gt * 255).astype(np.uint8))
 

@@ -88,10 +88,9 @@ class TestNSN():
             for y in range(0, pad_size[0]-self.stride[0], self.stride[0]):
                 for x in range(0, pad_size[1]-self.stride[1], self.stride[1]):
                     x_patch = image[y:y+self.patchsize[0], x:x+self.patchsize[1]]
-                    x_patch = np.expand_dims(np.expand_dims(x_patch.astype(np.float32), axis=0), axis=0)
+                    x_patch = torch.Tensor(np.expand_dims(np.expand_dims(x_patch.astype(np.float32), axis=0), axis=0))
                     s_output = self.model(x=x_patch.to(torch.device(self.gpu)), t=None, seg=True)
-                    if self.gpu >= 0:
-                        s_output = cuda.to_cpu(s_output)
+                    s_output = s_output.to(torch.device('cpu')).numpy()
                     pred = copy.deepcopy((0 < (s_output[0][1] - s_output[0][0])) * 255)
                     # Add segmentation image
                     pre_img[y:y+self.stride[0], x:x+self.stride[1]] += pred[sh[0]:-sh[0], sh[1]:-sh[1]]
@@ -104,9 +103,9 @@ class TestNSN():
                 for y in range(0, pad_size[1]-self.stride[1], self.stride[1]):
                     for x in range(0, pad_size[2]-self.stride[2], self.stride[2]):
                         x_patch = image[z:z+self.patchsize[0], y:y+self.patchsize[1], x:x+self.patchsize[2]]
-                        x_patch = np.expand_dims(np.expand_dims(x_patch.astype(np.float32), axis=0), axis=0)
+                        x_patch = torch.Tensor(np.expand_dims(np.expand_dims(x_patch.astype(np.float32), axis=0), axis=0))
                         s_output = self.model(x=x_patch.to(torch.device(self.gpu)), t=None, seg=True)
-                        s_output = s_output.to(torch.device('cpu'))
+                        s_output = s_output.to(torch.device('cpu')).numpy()
                         pred = copy.deepcopy((0 < (s_output[0][1] - s_output[0][0])) * 255)
                         # Add segmentation image
                         pre_img[z:z+self.stride[0], y:y+self.stride[1], x:x+self.stride[2]] += pred[sh[0]:-sh[0], sh[1]:-sh[1], sh[2]:-sh[2]]

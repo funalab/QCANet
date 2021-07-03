@@ -15,13 +15,13 @@ class Model_L2(nn.Module):
             pool_size=2,
             ap_factor=2,
             gpu=-1,
-            loss_func='F.softmax_cross_entropy'
+            loss_func='nn.CrossEntropyLoss'
         ):
         super(Model_L2, self).__init__()
         self.gpu = gpu
         self.pool_size = pool_size
-        self.train = True
-        self.loss_func = loss_func
+        self.phase = 'train'
+        self.loss_func = eval(loss_func)()
 
         self.c0=nn.Conv3d(1, init_channel, kernel_size, 1, int(kernel_size/2))
         self.c1=nn.Conv3d(init_channel, int(init_channel * (ap_factor ** 1)), kernel_size, 1, int(kernel_size/2))
@@ -84,16 +84,15 @@ class Model_L2(nn.Module):
         del d5
         return d6
 
-    def __call__(self, x, t=None, seg=True):
+    def forward(self, x, t=None, seg=True):
         h = self._calc(x)
         if seg:
-            pred = F.softmax(h)
+            pred = F.softmax(h, dim=1)
             del h
             return pred.data
         else:
-            #loss = eval(self.loss_func)(h, t, class_weight=self.class_weight)
-            loss = eval(self.loss_func)(h, t)
-            pred = F.softmax(h)
+            loss = self.loss_func(h, t.long())
+            pred = F.softmax(h, dim=1)
             del h
             return loss, pred.data
 
@@ -108,13 +107,13 @@ class Model_L3(nn.Module):
             pool_size=2,
             ap_factor=2,
             gpu=-1,
-            loss_func='F.softmax_cross_entropy'
+            loss_func='nn.CrossEntropyLoss'
         ):
         super(Model_L3, self).__init__()
         self.gpu = gpu
         self.pool_size = pool_size
-        self.train = True
-        self.loss_func = loss_func
+        self.phase = 'train'
+        self.loss_func = eval(loss_func)()
 
         self.c0=nn.Conv3d(1, init_channel, kernel_size, 1, int(kernel_size/2))
         self.c1=nn.Conv3d(init_channel, int(init_channel * (ap_factor ** 1)), kernel_size, 1, int(kernel_size/2))
@@ -198,16 +197,15 @@ class Model_L3(nn.Module):
         del d8
         return d9
 
-    def __call__(self, x, t=None, seg=True):
+    def forward(self, x, t=None, seg=True):
         h = self._calc(x)
         if seg:
-            pred = F.softmax(h)
+            pred = F.softmax(h, dim=1)
             del h
             return pred.data
         else:
-            #loss = eval(self.loss_func)(h, t, class_weight=self.class_weight)
-            loss = eval(self.loss_func)(h, t)
-            pred = F.softmax(h)
+            loss = self.loss_func(h, t.long())
+            pred = F.softmax(h, dim=1)
             del h
             return loss, pred.data
 
@@ -222,13 +220,13 @@ class Model_L4(nn.Module):
             pool_size=2,
             ap_factor=2,
             gpu=-1,
-            loss_func='F.softmax_cross_entropy'
+            loss_func='nn.CrossEntropyLoss'
         ):
         super(Model_L4, self).__init__()
         self.gpu = gpu
         self.pool_size = pool_size
-        self.train = True
-        self.loss_func = loss_func
+        self.phase = 'train'
+        self.loss_func = eval(loss_func)()
 
         self.c0=nn.Conv3d(1, init_channel, kernel_size, 1, int(kernel_size/2))
         self.c1=nn.Conv3d(init_channel, int(init_channel * (ap_factor ** 1)), kernel_size, 1, int(kernel_size/2))
@@ -332,15 +330,14 @@ class Model_L4(nn.Module):
         del d11
         return d12
 
-    def __call__(self, x, t=None, seg=True):
+    def forward(self, x, t=None, seg=True):
         h = self._calc(x)
         if seg:
-            pred = F.softmax(h)
+            pred = F.softmax(h, dim=1)
             del h
             return pred.data
         else:
-            #loss = eval(self.loss_func)(h, t, class_weight=self.class_weight)
-            loss = eval(self.loss_func)(h, t)
-            pred = F.softmax(h)
+            loss = self.loss_func(h, t.long())
+            pred = F.softmax(h, dim=1)
             del h
             return loss, pred.data
