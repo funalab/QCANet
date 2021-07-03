@@ -23,7 +23,7 @@ plt.style.use('ggplot')
 
 class GraphDrawAll():
 
-    def __init__(self, opbase, roi):
+    def __init__(self, opbase, roi, filename):
         self.opbase = opbase
         self.roi = roi
         #self.scale = 0.8 * 0.8 * 1.75
@@ -34,6 +34,7 @@ class GraphDrawAll():
         self.z = 111
         self.density = 0
         self.roi_pixel_num = 0
+        self.filename = filename
         if roi != 0:
             with open('GT/10minGroundTruth/CSVfile/test{}.csv'.format(roi), 'r') as f:
                 dataReader = csv.reader(f)
@@ -55,7 +56,10 @@ class GraphDrawAll():
         plt.figure()
         for num in range(len(Count)):
             colors = cmap(float(num) / len(Count))
+            #if np.unique((np.array(Count[num][:100]) > 8) * 1)[0] == 0 and len(np.unique((np.array(Count[num][:100]) > 8) * 1)) < 2:
             plt.plot(Time[:len(Count[num])], Count[num], color=colors, alpha=0.8, linewidth=1.0)
+            #else:
+            #    print(self.filename[num])
         # plt.legend(['Emb.1', 'Emb.2', 'Emb.3', 'Emb.4', 'Emb.5', 'Emb.6', 'Emb.7', 'Emb.8', 'Emb.9', 'Emb.10', 'Emb.11'] ,loc=2)
         plt.xlabel('Time [day]', size=12)
         plt.ylabel('Number of Nuclei', size=12)
@@ -409,6 +413,34 @@ if __name__ == '__main__':
         all_cent_z.append(Cent_Z)
 
 
+    without = True
+    if without:
+        thr = 100 #4
+        pop_list = []
+        for i in range(len(all_count)):
+            if np.unique((np.array(all_count[i][:100]) > thr) * 1)[0] == 0 and \
+               len(np.unique((np.array(all_count[i][:100]) > thr) * 1)) < 2:
+                pass
+            else:
+                pop_list.append(i)
+                with open('without_embryo_filename.txt', 'a') as f:
+                    print(file_name[i])
+                    f.write('{}\n'.format(file_name[i][28:]))
+
+        print('number of faiulure segmentation: {}'.format(len(pop_list)))
+        c = 0
+        for p in pop_list:
+            all_vol_sum.pop(p - c)
+            all_sur_sum.pop(p - c)
+            all_vol_mean.pop(p - c)
+            all_sur_mean.pop(p - c)
+            all_vol_std.pop(p - c)
+            all_sur_std.pop(p - c)
+            all_count.pop(p - c)
+            c += 1
+
+        
+
     # Time Scale
     dt = 10 / float(60 * 24)
     count_max = 0
@@ -417,11 +449,11 @@ if __name__ == '__main__':
     #Time = [dt*x for x in range(len(Count))]
     Time = [dt*x for x in range(count_max)]
 
-    gd = GraphDrawAll(opbase, args.roi)
+    gd = GraphDrawAll(opbase, args.roi, file_name)
     gd.graph_draw_number(Time, all_count)
-    gd.graph_draw_synchronicity(Time, all_count)
+    #gd.graph_draw_synchronicity(Time, all_count)
     gd.graph_draw_volume(Time, all_vol_sum, all_vol_mean, all_vol_std)
     gd.graph_draw_surface(Time, all_sur_sum, all_sur_mean, all_sur_std)
-    gd.graph_draw_surface_volume(Time, all_sur_sum, all_sur_mean, all_sur_std, all_vol_sum, all_vol_mean, all_vol_std)
-    gd.graph_draw_lfunction(all_cent_x, all_cent_y, all_cent_z)
-    plt.show()
+    #gd.graph_draw_surface_volume(Time, all_sur_sum, all_sur_mean, all_sur_std, all_vol_sum, all_vol_mean, all_vol_std)
+    #gd.graph_draw_lfunction(all_cent_x, all_cent_y, all_cent_z)
+    #plt.show()
