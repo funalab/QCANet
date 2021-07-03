@@ -5,9 +5,11 @@ import sys
 import random
 import numpy as np
 from skimage import io
-import chainer
 from skimage import io
 from skimage import transform as tr
+
+import torch
+from torch.utils.data import Dataset
 
 def read_img(path, arr_type='npz'):
     """ read image array from path
@@ -166,7 +168,7 @@ def crop_pair_3d(
                 raise ValueError('invalid value nb_crop :', nb_crop)
 
 
-class PreprocessedDataset(chainer.dataset.DatasetMixin):
+class PreprocessedDataset(Dataset):
 
     def __init__(
         self,
@@ -252,7 +254,7 @@ class PreprocessedDataset(chainer.dataset.DatasetMixin):
             label = np.pad(label, pad_width=pad_size, mode='reflect')
         return label.astype(np.int32)
 
-    def get_example(self, i):
+    def __getitem__(self, i):
         if self.ndim == 2:
             image = self._get_image_2d(i)
             label = self._get_label_2d(i)

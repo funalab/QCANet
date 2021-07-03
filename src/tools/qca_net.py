@@ -1,8 +1,5 @@
 # -*- coding: utf-8 -*-
 
-import chainer
-from chainer import cuda, serializers
-
 import csv
 import sys
 import time
@@ -14,10 +11,12 @@ import numpy as np
 import configparser
 from argparse import ArgumentParser
 from os import path as pt
+from numpy.core.records import array
 import skimage.io as io
 from skimage import morphology
 from skimage.morphology import watershed
 from scipy import ndimage
+import torch
 
 sys.path.append(os.getcwd())
 from src.lib.trainer import NSNTrainer, NDNTrainer
@@ -58,8 +57,6 @@ def main():
     #                     help='Number of base channels (to control total memory and segmentor performance)')
     ap.add_argument('--ch_out', type=int, default=2,
                         help='Number of channels for output (label)')
-    ap.add_argument('--class_weight', default='(1, 1)',
-                        help='Specify class weight with softmax corss entropy')
     ap.add_argument('--model', default='NSN',
                         help='Specify class weight with softmax corss entropy')
 
@@ -92,39 +89,21 @@ def main():
 
 
     # Create Model
-    class_weight = np.array([1, 1]).astype(np.float32)
-    if args.gpu >= 0:
-        class_weight = cuda.to_gpu(class_weight)
-
     print('Initializing models...')
-
-    #args.model = 'NDN'
-    #args.ch_base = 16
-    nsn = get_model(args)
-    args.model = 'NDN'
-    args.ch_base = 12
-    ndn = get_model(args)
     if args.model_nsn is not None:
         print('Load NSN from', args.model_nsn)
-        try:
-            chainer.serializers.load_npz(args.model_nsn, nsn, strict=False)
-        except:
-            chainer.serializers.load_hdf5(args.model_nsn, nsn)
+        nsn = torch.load(args.model_nsn)
+    else:
+        raise ValueError('Specified model path')
+
     if args.model_ndn is not None:
         print('Load NDN from', args.model_ndn)
-        try:
-            chainer.serializers.load_npz(args.model_ndn, ndn, strict=False)
-        except:
-            chainer.serializers.load_hdf5(args.model_ndn, ndn)
+        ndn = torch.load(args.model_ndn)
+    else:
+        raise ValueError('Specified model path')
 
-    # Load Model
-    chainer.serializers.load_npz(args.model_ndn, ndn, strict=False)
-    chainer.serializers.load_npz(args.model_nsn, nsn, strict=False)
-
-    if args.gpu >= 0:
-        cuda.get_device(args.gpu).use()  # Make a specified GPU current
-        nsn.to_gpu()  # Copy the SegmentNucleus model to the GPU
-        ndn.to_gpu()
+    nsn = nsn.to(args.device)
+    ndn = ndn.to(args.device)
 
     dlist = os.listdir(args.indir)
     with open(opbase + psep + 'result.txt', 'a') as f:

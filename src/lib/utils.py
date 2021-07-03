@@ -9,7 +9,6 @@ import argparse
 import skimage.io as io
 from os import path as pt
 from distutils.util import strtobool
-from chainer import serializers
 
 from src.lib.dataset import PreprocessedDataset
 from src.lib.model import Model_L2, Model_L3, Model_L4
@@ -54,7 +53,6 @@ def get_model(args):
             pool_size=2,
             ap_factor=2,
             gpu=args.gpu,
-            class_weight=eval(args.class_weight),
             loss_func=args.lossfun
         )
     elif args.model == 'NDN':
@@ -66,7 +64,6 @@ def get_model(args):
             pool_size=2,
             ap_factor=2,
             gpu=args.gpu,
-            class_weight=eval(args.class_weight),
             loss_func=args.lossfun
         )
     elif args.model == '3DUNet':
@@ -78,7 +75,6 @@ def get_model(args):
             pool_size=2,
             ap_factor=2,
             gpu=args.gpu,
-            class_weight=eval(args.class_weight),
             loss_func=args.lossfun
         )
     else:
@@ -156,7 +152,7 @@ def create_runtime_parser(remaining_argv, **conf_dict):
                         help='Learning rate reduction ratio')
     parser.add_argument('--weight_decay', type=float,
                         help='Weight decay for optimizer scheduling')
-    parser.add_argument('--gpu', type=int,
+    parser.add_argument('--gpu', type=str,
                         help='GPU ID (negative value indicates CPU')
     parser.add_argument('--patch_size',
                         help='Specify one side voxel size of ROI')
@@ -166,8 +162,6 @@ def create_runtime_parser(remaining_argv, **conf_dict):
                         help='If True, mean normalization')
     parser.add_argument('--augmentation', type=strtobool,
                         help='If True, data augmentation (rotation)')
-    parser.add_argument('--class_weight',
-                        help='Specify class weight with softmax corss entropy')
     parser.add_argument('--scaling', type=strtobool,
                         help='If True, image-wise scaling image')
     args, remaining_argv = parser.parse_known_args(remaining_argv)
@@ -322,18 +316,6 @@ def createOpbase(opbase):
         print('Output Directory not exist! Create...')
     print('Output Directory: {}'.format(opbase))
     return opbase
-
-
-def loadModel(model_path, model, opbase):
-    try:
-        serializers.load_hdf5(model_path, model)
-        print('Loading Model: {}'.format(model_path))
-        with open(os.path.join(opbase, 'result.txt'), 'a') as f:
-            f.write('Loading Model: {}\n'.format(model_path))
-    except:
-        print('Not Found: {}'.format(model_path))
-        print('Usage : Input File Path of Model (ex ./hoge.model)')
-        sys.exit()
 
 
 # Oneside Mirroring Padding in Image-wise Processing

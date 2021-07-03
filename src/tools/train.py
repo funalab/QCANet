@@ -1,8 +1,5 @@
 # -*- coding: utf-8 -*-
 
-import chainer
-from chainer import cuda
-
 import csv
 import sys
 import time
@@ -14,6 +11,10 @@ import numpy as np
 import argparse
 import configparser
 
+import torch
+import torch.optim as optim
+from torch.utils.data import DataLoader
+
 sys.path.append(os.getcwd())
 from src.lib.trainer import NSNTrainer, NDNTrainer
 from src.lib.utils import createOpbase
@@ -21,9 +22,11 @@ from src.lib.utils import create_dataset_parser, create_model_parser, create_run
 from src.lib.utils import print_args
 from src.lib.utils import get_dataset, get_model
 
+seed = 109
+
 def main():
 
-    """ Implementation of Quantitative Criteria Acquisition Network based on Chainer """
+    """ Implementation of Quantitative Criteria Acquisition Network based on PyTorch """
     start_time = time.time()
 
     ''' ConfigParser '''
@@ -67,6 +70,10 @@ def main():
     #with open(opbase + psep + 'result.txt', 'w') as f:
     #    f.write(print_args(dataset_args, model_args, runtime_args))
 
+    # Seed
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
 
     ''' Dataset '''
     print('Loading datasets...')
@@ -76,11 +83,15 @@ def main():
 
 
     ''' Iterator '''
-    train_iterator = chainer.iterators.SerialIterator(
-        train_dataset, int(args.batchsize), repeat=True, shuffle=True
+    train_iterator = DataLoader(
+        dataset=train_dataset,
+        batch_size=int(args.batchsize),
+        shuffle=True
     )
-    validation_iterator = chainer.iterators.SerialIterator(
-        validation_dataset, int(args.batchsize), repeat=True, shuffle=False
+    validation_iterator = DataLoader(
+        dataset=validation_dataset,
+        batch_size=int(args.val_batchsize),
+        shuffle=False
     )
 
     ''' Model '''
@@ -88,14 +99,43 @@ def main():
     model = get_model(args)
     if args.init_model is not None:
         print('Load model from', args.init_model)
-        try:
-            chainer.serializers.load_npz(args.init_model, model)
-        except:
-            chainer.serializers.load_hdf5(args.init_model, model)
-    if args.gpu >= 0:
-        cuda.get_device(args.gpu).use()  # Make a specified GPU current
-        model.to_gpu()  # Copy the SegmentNucleus model to the GPU
+        model = torch.load(args.init_model)
+    model = model.to(args.gpu)
 
+    ''' Optimizer '''
+    # Initialize an optimizer
+    if args.optimizer == 'SGD':
+        optimizer = optim.SGD(
+            params=model.parameters(),
+            lr=args.init_lr,
+            momentum=args.momentum,
+            weight_decay=args.weight_decay
+            )
+    elif args.optimizer == 'Adadelta':
+        optimizer = optim.Adadelta(
+            params=model.parameters(),
+            lr=args.init_lr,
+            rho=args.momentum,
+            weight_decay=args.weight_decay
+            )
+    elif args.optimizer == 'Adagrad':
+        optimizer = optim.Adagrad(
+            params=model.parameters(),
+            lr=args.init_lr,
+            weight_decay=args.weight_decay
+            )
+    elif args.optimizer == 'Adam':
+        optimizer = optim.Adam(
+            params=model.parameters(),
+            lr=args.init_lr,
+            weight_decay=args.weight_decay
+            )
+    elif args.optimizer == 'AdamW':
+        optimizer = optim.AdamW(
+            params=model.parameters(),
+            lr=args.init_lr,
+            weight_decay=args.weight_decay
+            )
 
     ''' Training Phase '''
     with open(opbase + psep + 'TestResult.csv', 'w') as f:
@@ -114,8 +154,8 @@ def main():
             batchsize=args.batchsize,
             gpu=args.gpu,
             opbase=opbase,
+            optimizer=optimizer,
             mean_image=mean_image,
-            opt_method=args.optimizer,
             ndim=args.ndim
         )
     elif args.model == 'NDN':
@@ -126,8 +166,8 @@ def main():
             batchsize=args.batchsize,
             gpu=args.gpu,
             opbase=opbase,
+            optimizer=optimizer,
             mean_image=mean_image,
-            opt_method=args.optimizer,
             delv=3,
             r_thr=10,
             ndim=args.ndim

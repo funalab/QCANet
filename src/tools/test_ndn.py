@@ -13,7 +13,7 @@ from skimage import io
 from skimage import transform as tr
 from skimage import morphology as mor
 from argparse import ArgumentParser
-from chainer import cuda
+import torch
 
 sys.path.append(os.getcwd())
 from src.lib.model import Model_L2, Model_L3, Model_L4
@@ -95,11 +95,8 @@ class TestNDN():
                 for x in range(0, pad_size[1]-self.stride[1], self.stride[1]):
                     x_patch = image[y:y+self.patchsize[0], x:x+self.patchsize[1]]
                     x_patch = np.expand_dims(np.expand_dims(x_patch.astype(np.float32), axis=0), axis=0)
-                    if self.gpu >= 0:
-                        x_patch = cuda.to_gpu(x_patch)
-                    s_output = self.model(x=x_patch, t=None, seg=True)
-                    if self.gpu >= 0:
-                        s_output = cuda.to_cpu(s_output)
+                    s_output = self.model(x=x_patch.to(torch.device(self.gpu)), t=None, seg=True)
+                    s_output = s_output.to(torch.device('cpu'))
                     pred = copy.deepcopy((0 < (s_output[0][1] - s_output[0][0])) * 255)
                     # Add segmentation image
                     pre_img[y:y+self.stride[0], x:x+self.stride[1]] += pred[sh[0]:-sh[0], sh[1]:-sh[1]]
@@ -113,11 +110,8 @@ class TestNDN():
                     for x in range(0, pad_size[2]-self.stride[2], self.stride[2]):
                         x_patch = image[z:z+self.patchsize[0], y:y+self.patchsize[1], x:x+self.patchsize[2]]
                         x_patch = np.expand_dims(np.expand_dims(x_patch.astype(np.float32), axis=0), axis=0)
-                        if self.gpu >= 0:
-                            x_patch = cuda.to_gpu(x_patch)
-                        s_output = self.model(x=x_patch, t=None, seg=True)
-                        if self.gpu >= 0:
-                            s_output = cuda.to_cpu(s_output)
+                        s_output = self.model(x=x_patch.to(torch.device(self.gpu)), t=None, seg=True)
+                        s_output = s_output.to(torch.device('cpu'))
                         pred = copy.deepcopy((0 < (s_output[0][1] - s_output[0][0])) * 255)
                         # Add segmentation image
                         pre_img[z:z+self.stride[0], y:y+self.stride[1], x:x+self.stride[2]] += pred[sh[0]:-sh[0], sh[1]:-sh[1], sh[2]:-sh[2]]
@@ -177,11 +171,8 @@ if __name__ == '__main__':
         f.write('Delete Voxels: {}\n'.format(args.delete))
 
     # Create Model
-    class_weight = np.array([1, 1]).astype(np.float32)
-    if args.gpu >= 0:
-        class_weight = cuda.to_gpu(class_weight)
     # Adam
-    ndn = Model_L4(class_weight=class_weight, n_class=2, init_channel=12,
+    ndn = Model_L4(n_class=2, init_channel=12,
                    kernel_size=5, pool_size=2, ap_factor=2, gpu=args.gpu)
     # SGD
     # ndn = Model_L3(class_weight=class_weight, n_class=2, init_channel=16,
@@ -190,9 +181,7 @@ if __name__ == '__main__':
     # Load Model
     if not args.model == '0':
         util.loadModel(args.model, ndn)
-    if args.gpu >= 0:
-        cuda.get_device(args.gpu).use()
-        ndn.to_gpu()
+    ndn = ndn.to(args.gpu)
 
     # Detection Phase
     test_ndn = TestNDN(model=ndn, patchsize=patchsize, stride=stride,

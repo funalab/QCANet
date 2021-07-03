@@ -12,7 +12,7 @@ import os.path as pt
 from skimage import io
 from skimage import transform as tr
 from argparse import ArgumentParser
-from chainer import cuda
+import torch
 
 sys.path.append(os.getcwd())
 from src.lib.model import Model_L2, Model_L3, Model_L4
@@ -89,9 +89,7 @@ class TestNSN():
                 for x in range(0, pad_size[1]-self.stride[1], self.stride[1]):
                     x_patch = image[y:y+self.patchsize[0], x:x+self.patchsize[1]]
                     x_patch = np.expand_dims(np.expand_dims(x_patch.astype(np.float32), axis=0), axis=0)
-                    if self.gpu >= 0:
-                        x_patch = cuda.to_gpu(x_patch)
-                    s_output = self.model(x=x_patch, t=None, seg=True)
+                    s_output = self.model(x=x_patch.to(torch.device(self.gpu)), t=None, seg=True)
                     if self.gpu >= 0:
                         s_output = cuda.to_cpu(s_output)
                     pred = copy.deepcopy((0 < (s_output[0][1] - s_output[0][0])) * 255)
@@ -107,11 +105,8 @@ class TestNSN():
                     for x in range(0, pad_size[2]-self.stride[2], self.stride[2]):
                         x_patch = image[z:z+self.patchsize[0], y:y+self.patchsize[1], x:x+self.patchsize[2]]
                         x_patch = np.expand_dims(np.expand_dims(x_patch.astype(np.float32), axis=0), axis=0)
-                        if self.gpu >= 0:
-                            x_patch = cuda.to_gpu(x_patch)
-                        s_output = self.model(x=x_patch, t=None, seg=True)
-                        if self.gpu >= 0:
-                            s_output = cuda.to_cpu(s_output)
+                        s_output = self.model(x=x_patch.to(torch.device(self.gpu)), t=None, seg=True)
+                        s_output = s_output.to(torch.device('cpu'))
                         pred = copy.deepcopy((0 < (s_output[0][1] - s_output[0][0])) * 255)
                         # Add segmentation image
                         pre_img[z:z+self.stride[0], y:y+self.stride[1], x:x+self.stride[2]] += pred[sh[0]:-sh[0], sh[1]:-sh[1], sh[2]:-sh[2]]
@@ -158,22 +153,17 @@ if __name__ == '__main__':
         f.write('Stride Size: {}\n'.format(stride))
 
     # Create Model
-    class_weight = np.array([1, 1]).astype(np.float32)
-    if args.gpu >= 0:
-        class_weight = cuda.to_gpu(class_weight)
     # Adam
     # nsn = Model_L2(class_weight=class_weight, n_class=2, init_channel=16,
     #                kernel_size=3, pool_size=2, ap_factor=2, gpu=args.gpu)
     # SGD
-    nsn = Model_L2(class_weight=class_weight, n_class=2, init_channel=16,
+    nsn = Model_L2(n_class=2, init_channel=16,
                    kernel_size=3, pool_size=2, ap_factor=2, gpu=args.gpu)
 
     # Load Model
     if not args.model == '0':
         util.loadModel(args.model, nsn)
-    if args.gpu >= 0:
-        cuda.get_device(args.gpu).use()
-        nsn.to_gpu()
+    nsn = nsn.to(args.gpu)
 
     # Segmentation Phase
     test_nsn = TestNSN(model=nsn, patchsize=patchsize, stride=stride,
