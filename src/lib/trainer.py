@@ -264,8 +264,8 @@ class NSNTrainer():
             if self.ndim == 2:
                 x_batch = mirror_extension_image(image=x_batch, ndim=self.ndim, length=int(np.max(self.patchsize)))[:, :, self.patchsize[0]-sh[0]:self.patchsize[0]-sh[0]+pad_size[0], self.patchsize[1]-sh[1]:self.patchsize[1]-sh[1]+pad_size[1]]
                 y_batch = mirror_extension_image(image=y_batch, ndim=self.ndim,  length=int(np.max(self.patchsize)))[:, self.patchsize[0]-sh[0]:self.patchsize[0]-sh[0]+pad_size[0], self.patchsize[1]-sh[1]:self.patchsize[1]-sh[1]+pad_size[1]]
-                for y in range(0, pad_size[0]-stride[0], stride[0]):
-                    for x in range(0, pad_size[1]-stride[1], stride[1]):
+                for y in range(0, pad_size[0]-self.patchsize[0], stride[0]):
+                    for x in range(0, pad_size[1]-self.patchsize[1], stride[1]):
                         x_patch = x_batch[:, :, y:y+self.patchsize[0], x:x+self.patchsize[1]]
                         y_patch = y_batch[:, y:y+self.patchsize[0], x:x+self.patchsize[1]]
                         if self.gpu >= 0:
