@@ -211,10 +211,10 @@ class NSNTrainer():
             if self.ndim == 2:
                 x_batch = mirror_extension_image(image=x_batch, ndim=self.ndim, length=int(np.max(self.patchsize)))[:, self.patchsize[0]-sh[0]:self.patchsize[0]-sh[0]+pad_size[0], self.patchsize[1]-sh[1]:self.patchsize[1]-sh[1]+pad_size[1]]
                 y_batch = mirror_extension_image(image=y_batch, ndim=self.ndim,  length=int(np.max(self.patchsize)))[:, self.patchsize[0]-sh[0]:self.patchsize[0]-sh[0]+pad_size[0], self.patchsize[1]-sh[1]:self.patchsize[1]-sh[1]+pad_size[1]]
-                for y in range(0, pad_size[0]-stride[0], stride[0]):
-                    for x in range(0, pad_size[1]-stride[1], stride[1]):
-                        x_patch = x_batch[:, y:y+self.patchsize[0], x:x+self.patchsize[1]]
-                        y_patch = y_batch[:, y:y+self.patchsize[0], x:x+self.patchsize[1]]
+                for y in range(0, pad_size[0]-self.patchsize[0], stride[0]):
+                    for x in range(0, pad_size[1]-self.patchsize[1], stride[1]):
+                        x_patch = torch.Tensor(x_batch[:, y:y+self.patchsize[0], x:x+self.patchsize[1]])
+                        y_patch = torch.Tensor(y_batch[:, y:y+self.patchsize[0], x:x+self.patchsize[1]])
                         s_loss, s_output = self.model(x=x_patch.to(torch.device(self.gpu)), t=y_patch.to(torch.device(self.gpu)), seg=False)
                         sum_loss += float(s_loss.to(torch.device('cpu')) * self.batchsize)
                         s_output = s_output.to(torch.device('cpu'))
@@ -240,8 +240,8 @@ class NSNTrainer():
                 seg_img = (pre_img > 0) * 1
                 seg_img = seg_img[:im_size[0], :im_size[1], :im_size[2]]
             gt = gt[0].numpy()
-            io.imsave('{}/segimg{}_validation.tif'.format(self.opbase, num), np.array(seg_img * 255).astype(np.uint8))
-            io.imsave('{}/gtimg{}_validation.tif'.format(self.opbase, num), np.array(gt * 255).astype(np.uint8))
+            # io.imsave('{}/segimg{}_validation.tif'.format(self.opbase, num), np.array(seg_img * 255).astype(np.uint8))
+            # io.imsave('{}/gtimg{}_validation.tif'.format(self.opbase, num), np.array(gt * 255).astype(np.uint8))
             countListPos = copy.deepcopy(seg_img.astype(np.int16) + gt.astype(np.int16))
             countListNeg = copy.deepcopy(seg_img.astype(np.int16) - gt.astype(np.int16))
             TP += len(np.where(countListPos.reshape(countListPos.size)==2)[0])
@@ -415,7 +415,7 @@ class NDNTrainer():
             #train_eval['loss'].append(s_loss.data)
             sum_loss += float(s_loss.to(torch.device('cpu')) * self.batchsize)
 
-            y_patch = y_patch.to(torch.device('cpu')).numpy()
+            y_patch = y_patch.to(torch.device('cpu')).numpy()[0]
             s_output = s_output.to(torch.device('cpu')).numpy()
             #make pred (0 : background, 1 : object)
             pred = copy.deepcopy((0 < (s_output[0][1] - s_output[0][0])) * 1)
@@ -491,12 +491,12 @@ class NDNTrainer():
             x_batch, y_batch = batch
             if self.ndim == 2:
                 im_size = x_batch.shape[1:]
-                stride = [self.patchsize[0]/2, self.patchsize[1]/2]
-                sh = [stride[0]/2, stride[1]/2]
+                stride = [int(self.patchsize[0]/2), int(self.patchsize[1]/2)]
+                sh = [int(stride[0]/2), int(stride[1]/2)]
             elif self.ndim == 3:
                 im_size = x_batch.shape[1:]
-                stride = [self.patchsize[0]/2, self.patchsize[1]/2, self.patchsize[2]/2]
-                sh = [stride[0]/2, stride[1]/2, stride[2]/2]
+                stride = [int(self.patchsize[0]/2), int(self.patchsize[1]/2), int(self.patchsize[2]/2)]
+                sh = [int(stride[0]/2), int(stride[1]/2), int(stride[2]/2)]
 
             ''' calculation for pad size'''
             if np.min(self.patchsize) > np.max(im_size):
@@ -511,7 +511,7 @@ class NDNTrainer():
                         stride_num = (im_size[axis] + 2*sh[axis] - self.patchsize[axis]) / stride[axis]
                     else:
                         stride_num = (im_size[axis] + 2*sh[axis] - self.patchsize[axis]) / stride[axis] + 1
-                    pad_size.append(stride[axis] * stride_num + self.patchsize[axis])
+                    pad_size.append(int(stride[axis] * stride_num + self.patchsize[axis]))
 
             gt = copy.deepcopy(y_batch)
 
@@ -519,10 +519,10 @@ class NDNTrainer():
                 x_batch = mirror_extension_image(image=x_batch, ndim=self.ndim, length=int(np.max(self.patchsize)))[:, self.patchsize[0]-sh[0]:self.patchsize[0]-sh[0]+pad_size[0], self.patchsize[1]-sh[1]:self.patchsize[1]-sh[1]+pad_size[1]]
                 y_batch = mirror_extension_image(image=y_batch, ndim=self.ndim, length=int(np.max(self.patchsize)))[:, self.patchsize[0]-sh[0]:self.patchsize[0]-sh[0]+pad_size[0], self.patchsize[1]-sh[1]:self.patchsize[1]-sh[1]+pad_size[1]]
                 pre_img = np.zeros(pad_size)
-                for y in range(0, pad_size[0]-stride[0], stride[0]):
-                    for x in range(0, pad_size[1]-stride[1], stride[1]):
+                for y in range(0, pad_size[0]-self.patchsize[0], stride[0]):
+                    for x in range(0, pad_size[1]-self.patchsize[1], stride[1]):
                         x_patch = torch.Tensor(np.expand_dims(x_batch[:, y:y+self.patchsize[0], x:x+self.patchsize[1]], axis=0))
-                        y_patch = y_batch[:, y:y+self.patchsize[0], x:x+self.patchsize[1]]
+                        y_patch = torch.Tensor(y_batch[:, y:y+self.patchsize[0], x:x+self.patchsize[1]])
                         s_loss, s_output = self.model(x=x_patch.to(torch.device(self.gpu)), t=y_patch.to(torch.device(self.gpu)), seg=False)
                         sum_loss += float(s_loss.to(torch.device('cpu')) * self.batchsize)
                         s_output = s_output.to(torch.device('cpu'))
@@ -535,11 +535,11 @@ class NDNTrainer():
                 x_batch = mirror_extension_image(image=x_batch, ndim=self.ndim, length=int(np.max(self.patchsize)))[:, self.patchsize[0]-sh[0]:self.patchsize[0]-sh[0]+pad_size[0], self.patchsize[1]-sh[1]:self.patchsize[1]-sh[1]+pad_size[1], self.patchsize[2]-sh[2]:self.patchsize[2]-sh[2]+pad_size[2]]
                 y_batch = mirror_extension_image(image=y_batch, ndim=self.ndim, length=int(np.max(self.patchsize)))[:, self.patchsize[0]-sh[0]:self.patchsize[0]-sh[0]+pad_size[0], self.patchsize[1]-sh[1]:self.patchsize[1]-sh[1]+pad_size[1], self.patchsize[2]-sh[2]:self.patchsize[2]-sh[2]+pad_size[2]]
                 pre_img = np.zeros(pad_size)
-                for z in range(0, pad_size[0]-stride[0], stride[0]):
-                    for y in range(0, pad_size[1]-stride[1], stride[1]):
-                        for x in range(0, pad_size[2]-stride[2], stride[2]):
+                for z in range(0, pad_size[0]-self.patchsize[0], stride[0]):
+                    for y in range(0, pad_size[1]-self.patchsize[1], stride[1]):
+                        for x in range(0, pad_size[2]-self.patchsize[2], stride[2]):
                             x_patch = torch.Tensor(np.expand_dims(x_batch[:, z:z+self.patchsize[0], y:y+self.patchsize[1], x:x+self.patchsize[2]], axis=0))
-                            y_patch = y_batch[:, z:z+self.patchsize[0], y:y+self.patchsize[1], x:x+self.patchsize[2]]
+                            y_patch = torch.Tensor(y_batch[:, z:z+self.patchsize[0], y:y+self.patchsize[1], x:x+self.patchsize[2]])
                             s_loss, s_output = self.model(x=x_patch.to(torch.device(self.gpu)), t=y_patch.to(torch.device(self.gpu)), seg=False)
                             sum_loss += float(s_loss.data.to(torch.device('cpu')) * self.batchsize)
                             s_output = s_output.to(torch.device('cpu')).numpy()
@@ -549,8 +549,8 @@ class NDNTrainer():
                 seg_img = (pre_img > 0) * 1
                 seg_img = seg_img[0:im_size[0], 0:im_size[1], 0:im_size[2]]
             gt = gt[0].numpy()
-            io.imsave('{}/segimg{}_validation.tif'.format(self.opbase, num), np.array(seg_img * 255).astype(np.uint8))
-            io.imsave('{}/gtimg{}_validation.tif'.format(self.opbase, num), np.array(gt * 255).astype(np.uint8))
+            # io.imsave('{}/segimg{}_validation.tif'.format(self.opbase, num), np.array(seg_img * 255).astype(np.uint8))
+            # io.imsave('{}/gtimg{}_validation.tif'.format(self.opbase, num), np.array(gt * 255).astype(np.uint8))
 
             if epoch > 0:
                 #make Centroid Pred (0 : background, 1 : object)
