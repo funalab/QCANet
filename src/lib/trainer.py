@@ -668,7 +668,7 @@ class NDNTrainer():
             # io.imsave('{}/segimg{}_validation.tif'.format(self.opbase, num), np.array(seg_img * 255).astype(np.uint8))
             # io.imsave('{}/gtimg{}_validation.tif'.format(self.opbase, num), np.array(gt * 255).astype(np.uint8))
 
-            if epoch >= self.eval_epoch::
+            if epoch >= self.eval_epoch:
                 #make Centroid Pred (0 : background, 1 : object)
                 markers_pr = morphology.label(seg_img, neighbors=4)
                 mask_size = np.unique(markers_pr, return_counts=True)[1] < (self.delv + 1)
