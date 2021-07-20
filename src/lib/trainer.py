@@ -373,7 +373,7 @@ class NDNTrainer():
         self.delv = delv
         self.r_thr = r_thr
         self.ndim = ndim
-        self.val_iteration = 1
+        self.eval_epoch = 0
 
 
     def training(self, iterators):
@@ -408,7 +408,7 @@ class NDNTrainer():
             print('[epoch {}]'.format(epoch))
             traeval, train_sum_loss = self._trainer(train_iter, opt_ndn, epoch=epoch)
             train_eval['loss'].append(train_sum_loss / (N_train * self.batchsize))
-            if epoch % self.val_iteration == 0:
+            if epoch >= self.eval_epoch:
                 teseval, test_sum_loss = self._validater(val_iter, epoch=epoch)
                 test_eval['loss'].append(test_sum_loss / (N_test * self.batchsize))
             else:
@@ -434,7 +434,7 @@ class NDNTrainer():
                 f.write('train mean loss={}\n'.format(train_sum_loss / (N_train * self.batchsize)))
                 f.write('train recall={}, presicion={}\n'.format(traeval['Recall'], traeval['Precision']))
                 f.write('train F-measure={}, IoU={}\n'.format(traeval['F-measure'], traeval['IoU']))
-                if epoch % self.val_iteration == 0:
+                if epoch >= self.eval_epoch:
                     f.write('validation mean loss={}\n'.format(test_sum_loss / (N_test * self.batchsize)))
                     f.write('validation recall={}, presicion={}\n'.format(teseval['Recall'], teseval['Precision']))
                     f.write('validation F-measure={}, IoU={}\n'.format(teseval['F-measure'], teseval['IoU']))
@@ -523,7 +523,7 @@ class NDNTrainer():
                 s_output = cuda.to_cpu(s_output)
             #make pred (0 : background, 1 : object)
             pred = copy.deepcopy((0 < (s_output[0][1] - s_output[0][0])) * 1)
-            if epoch % self.val_iteration == 0:
+            if epoch >= self.eval_epoch:
                 #make Centroid Pred (0 : background, 1 : object)
                 markers_pr = morphology.label(pred, neighbors=4)
                 mask_size = np.unique(markers_pr, return_counts=True)[1] < (self.delv + 1)
@@ -668,7 +668,7 @@ class NDNTrainer():
             # io.imsave('{}/segimg{}_validation.tif'.format(self.opbase, num), np.array(seg_img * 255).astype(np.uint8))
             # io.imsave('{}/gtimg{}_validation.tif'.format(self.opbase, num), np.array(gt * 255).astype(np.uint8))
 
-            if epoch > 0:
+            if epoch >= self.eval_epoch::
                 #make Centroid Pred (0 : background, 1 : object)
                 markers_pr = morphology.label(seg_img, neighbors=4)
                 mask_size = np.unique(markers_pr, return_counts=True)[1] < (self.delv + 1)
