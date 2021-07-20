@@ -373,7 +373,7 @@ class NDNTrainer():
         self.delv = delv
         self.r_thr = r_thr
         self.ndim = ndim
-        self.val_iteration = 10
+        self.val_iteration = 1
 
 
     def training(self, iterators):
