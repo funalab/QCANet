@@ -63,6 +63,7 @@ class TestNSN():
             image = image.astype(np.float32)
             #image = image / image.max()
             image = (image - image.min()) / (image.max() - image.min())
+            #image = (image - image.mean()) / image.std()
 
 
 
