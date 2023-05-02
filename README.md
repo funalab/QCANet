@@ -23,10 +23,10 @@ The left hand side of the image(movie) is the early-stage mouse embryo, whose ce
 ## Requirements
 
 - [Python 3.7](https://www.python.org/downloads/)
-- [PyTorch](https://pytorch.org/)
-- [Matplotlib](https://matplotlib.org/)
-- [NumPy](http://www.numpy.org)
-- [scikit-image](http://scikit-image.org/)
+- [PyTorch 1.7.0](https://pytorch.org/)
+- [Matplotlib 3.4.2](https://matplotlib.org/)
+- [NumPy 1.19.2](http://www.numpy.org)
+- [scikit-image 0.17.2](http://scikit-image.org/)
 
 See requirements.txt for details.
 
@@ -34,15 +34,13 @@ See requirements.txt for details.
 ## QuickStart
 
 1. Download the QCANet repository by `git clone`.
-2. ~~Download learned model.~~
+2. ~~Download learned model.~~ (PyTorch version of QCANet does not currently available trained models.)
 3. Change directory to `QCANet/src`.
-4. Run QCA Net.
+4. Run QCANet. (This can be done after creating a trained model in "How to train and run QCANet with your data" below.)
     - On Linux:
 
         ```sh
         % git clone https://github.com/funalab/QCANet.git
-        % wget -P QCANet/models https://fun.bio.keio.ac.jp/software/QCANet/learned_nsn.npz
-        % wget -P QCANet/models https://fun.bio.keio.ac.jp/software/QCANet/learned_ndn.npz
         % cd QCANet
         % python src/tools/qca_net.py --scaling_seg --scaling_det [--gpu gpu]
         ```
@@ -51,8 +49,6 @@ See requirements.txt for details.
 
         ```sh
         % git clone https://github.com/funalab/QCANet.git
-        % curl -o QCANet/models/learned_nsn.npz https://fun.bio.keio.ac.jp/software/QCANet/learned_nsn.npz
-        % curl -o QCANet/models/learned_ndn.npz https://fun.bio.keio.ac.jp/software/QCANet/learned_ndn.npz
         % cd QCANet
         % python src/tools/qca_net.py --scaling_seg --scaling_det [--gpu gpu]
         ```
