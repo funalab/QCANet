@@ -4,6 +4,11 @@ This is the code for [3D convolutional neural networks-based segmentation to acq
 This project is carried out in cooperation with [Funahashi Lab. at Keio University](https://fun.bio.keio.ac.jp/) and three labs: Hiroi Lab. at Sanyo-onoda City University, [Kobayashi Lab. at the University of Tokyo](http://research.crmind.net/), and Yamagata Lab. at Kindai University.
 
 
+# News
+
+* PyTorch version of QCANet is available [here](https://github.com/funalab/QCANet/tree/pytorch).
+* A paper on NVAN (Normalized Multi-View Attention Network), an algorithm for predicting the live birth potential of mouse embryos using QCANet, has been published. For more information, please click [here](https://doi.org/10.1016/j.artmed.2022.102432).
+
 ## Overview
 
 Quantitative Criteria Acquisition Network (QCANet) performs instance segmentation of 3D fluorescence microscopic images.
