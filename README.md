@@ -22,11 +22,14 @@ The left hand side of the image(movie) is the early-stage mouse embryo, whose ce
 
 ## Requirements
 
-- [Python 2.7, 3.6](https://www.python.org/downloads/)
-- [Chainer 1.24+](https://chainer.org/)
-- [Matplotlib](https://matplotlib.org/)
-- [NumPy](http://www.numpy.org)
-- [scikit-image](http://scikit-image.org/)
+- [Python 3.7](https://www.python.org/downloads/)
+- [Chainer 7.7.0](https://chainer.org/)
+- [Matplotlib 3.5.3](https://matplotlib.org/)
+- [NumPy 1.19.2](http://www.numpy.org)
+- [scikit-image 0.17.2](http://scikit-image.org/)
+
+See requirements.txt for details.  
+If you use GPU, please install [CuPy v7.8.0](https://docs.cupy.dev/en/v7.8.0/install.html) that matches your cuda version.
 
 
 ## QuickStart
