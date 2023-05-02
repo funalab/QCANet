@@ -1,4 +1,4 @@
-# QCANet: Quantitative Criteria Acquisition Network
+# QCANet: Quantitative Criteria Acquisition Network [PyTorch version]
 
 This is the code for [3D convolutional neural networks-based segmentation to acquire quantitative criteria of the nucleus during mouse embryogenesis](https://doi.org/10.1038/s41540-020-00152-8).
 This project is carried out in cooperation with [Funahashi Lab. at Keio University](https://fun.bio.keio.ac.jp/) and three labs: Hiroi Lab. at Sanyo-onoda City University, [Kobayashi Lab. at the University of Tokyo](http://research.crmind.net/), and Yamagata Lab. at Kindai University.
@@ -22,17 +22,19 @@ The left hand side of the image(movie) is the early-stage mouse embryo, whose ce
 
 ## Requirements
 
-- [Python 2.7, 3.6](https://www.python.org/downloads/)
-- [Chainer 1.24+](https://chainer.org/)
+- [Python 3.7](https://www.python.org/downloads/)
+- [PyTorch](https://pytorch.org/)
 - [Matplotlib](https://matplotlib.org/)
 - [NumPy](http://www.numpy.org)
 - [scikit-image](http://scikit-image.org/)
+
+See requirements.txt for details.
 
 
 ## QuickStart
 
 1. Download the QCANet repository by `git clone`.
-2. Download learned model.
+2. ~~Download learned model.~~
 3. Change directory to `QCANet/src`.
 4. Run QCA Net.
     - On Linux:
