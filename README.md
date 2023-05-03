@@ -6,8 +6,8 @@ This project is carried out in cooperation with [Funahashi Lab. at Keio Universi
 
 # News
 
-* PyTorch version of QCANet is available [here](https://github.com/funalab/QCANet/tree/pytorch).
-* A paper on NVAN (Normalized Multi-View Attention Network), an algorithm for predicting the live birth potential of mouse embryos using QCANet, has been published. For more information, please click [here](https://doi.org/10.1016/j.artmed.2022.102432).
+* [2023/05/03] PyTorch version of QCANet is available [here](https://github.com/funalab/QCANet/tree/pytorch).
+* [2022/11/02] A paper on NVAN (Normalized Multi-View Attention Network), an algorithm for predicting the live birth potential of mouse embryos using QCANet, has been published. For more information, please click [here](https://doi.org/10.1016/j.artmed.2022.102432).
 
 ## Overview
 
